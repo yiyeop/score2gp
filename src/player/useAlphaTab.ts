@@ -248,15 +248,46 @@ export function useAlphaTab() {
     setCurrentBar(0);
   }, []);
 
-  const goToBar = useCallback((index: number) => {
+  /**
+   * 해당 마디가 보이도록 즉시 스크롤한다 (애니메이션 없음).
+   *
+   * alphaTab은 재생 중일 때만 커서를 따라 자동 스크롤한다
+   * (내부적으로 `shouldScroll`이 재생 상태일 때만 true가 됨). 정지·일시정지
+   * 상태에서 tickPosition만 옮기면 커서는 이동해도 화면은 그대로다.
+   * 그래서 마디 이동·구간 클릭 시 직접 뷰포트를 계산해서 스크롤한다.
+   * `scrollTop`을 직접 대입하면 브라우저 스무스 스크롤을 타지 않고 즉시 이동한다.
+   */
+  const scrollToBarInstant = useCallback((barIndex: number) => {
     const api = apiRef.current;
-    const starts = barStartsRef.current;
-    if (!api || starts.length === 0) return;
-    const clamped = clamp(index, 0, starts.length - 1);
-    api.tickPosition = starts[clamped];
-    currentBarRef.current = clamped;
-    setCurrentBar(clamped);
+    const viewport = viewportRef.current;
+    const container = containerRef.current;
+    if (!api || !viewport || !container) return;
+    const bounds = api.boundsLookup?.findMasterBarByIndex(barIndex)?.visualBounds;
+    const surface = container.querySelector<HTMLElement>(".at-surface");
+    if (!bounds || !surface) return;
+
+    const surfaceTop = surface.getBoundingClientRect().top;
+    const viewportTop = viewport.getBoundingClientRect().top;
+    const targetTop = surfaceTop + bounds.y - viewportTop + viewport.scrollTop;
+
+    const padding = 16;
+    const maxScroll = Math.max(0, viewport.scrollHeight - viewport.clientHeight);
+    viewport.scrollTop = clamp(targetTop - padding, 0, maxScroll);
   }, []);
+
+  const goToBar = useCallback(
+    (index: number) => {
+      const api = apiRef.current;
+      const starts = barStartsRef.current;
+      if (!api || starts.length === 0) return;
+      const clamped = clamp(index, 0, starts.length - 1);
+      api.tickPosition = starts[clamped];
+      currentBarRef.current = clamped;
+      setCurrentBar(clamped);
+      scrollToBarInstant(clamped);
+    },
+    [scrollToBarInstant],
+  );
 
   const seekBars = useCallback(
     (delta: number) => goToBar(currentBarRef.current + delta),
