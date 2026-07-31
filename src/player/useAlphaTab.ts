@@ -64,6 +64,9 @@ export function useAlphaTab() {
   const [tabOnly, setTabOnly] = useState(false);
   const [visibleTracks, setVisibleTracks] = useState<number[]>([0]);
   const [hover, setHover] = useState<TechniqueHover | null>(null);
+  // 주법 안내(사이드바 목록 + 악보 툴팁) 전체 on/off. 기본은 켜짐.
+  const [techniqueGuide, setTechniqueGuide] = useState(true);
+  const techniqueGuideRef = useRef(true);
   const [encoding, setEncodingState] = useState("utf-8");
   const [isGarbledText, setIsGarbledText] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -159,6 +162,7 @@ export function useAlphaTab() {
       }
     };
     const onMouseMove = (e: MouseEvent) => {
+      if (!techniqueGuideRef.current) return clearHover();
       const lookup = api.boundsLookup;
       const surface = el.querySelector<HTMLElement>(".at-surface");
       if (!lookup || !surface) return clearHover();
@@ -341,6 +345,14 @@ export function useAlphaTab() {
     if (all) showTracks(all.map((_, i) => i));
   }, [showTracks]);
 
+  /** 주법 안내를 끄면 사이드바 목록과 악보 툴팁이 함께 사라진다. */
+  const toggleTechniqueGuide = useCallback(() => {
+    const next = !techniqueGuide;
+    techniqueGuideRef.current = next;
+    setTechniqueGuide(next);
+    if (!next) setHover(null);
+  }, [techniqueGuide]);
+
   const toggleTabOnly = useCallback(() => {
     const api = apiRef.current;
     if (!api) return;
@@ -417,6 +429,7 @@ export function useAlphaTab() {
     tabOnly,
     visibleTracks,
     hover,
+    techniqueGuide,
     encoding,
     isGarbledText,
     error,
@@ -434,6 +447,7 @@ export function useAlphaTab() {
     toggleMetronome,
     toggleCountIn,
     toggleTabOnly,
+    toggleTechniqueGuide,
     showTracks,
     toggleTrackVisible,
     showAllTracks,

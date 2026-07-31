@@ -83,13 +83,20 @@ const TONE_KEYWORDS = [
 ];
 
 /**
- * 영어 키워드는 단어 경계까지 맞춰야 한다.
- * 부분 일치로 두면 가사의 "hood"가 "od"(overdrive 약어)에 걸리는 식으로 오탐이 난다.
+ * 영어 키워드는 단어 첫머리에서부터 맞춰야 한다.
+ * 그냥 부분 일치로 두면 가사의 "hood"가 "od"(overdrive 약어)에 걸린다.
+ *
+ * 다만 뒤쪽까지 경계를 요구하면 "dist"가 "distortion"을 놓치므로,
+ * 짧은 약어(3글자 이하)만 한 단어로 딱 맞추고 나머지는 접두사로 본다.
+ * 그래서 "dist"는 distortion·distorted를 잡고, "od"는 od만 잡는다.
+ *
  * 한글은 단어 경계 개념이 달라서 그대로 포함 검사한다.
  */
 const KEYWORD_MATCHERS = TONE_KEYWORDS.map((kw) => {
-  if (!/^[a-z][a-z ]*$/.test(kw)) return { kw, test: (s: string) => s.includes(kw) };
-  const re = new RegExp(`\\b${kw}\\b`);
+  if (!/^[a-z][a-z ]*$/.test(kw)) {
+    return { kw, test: (s: string) => s.includes(kw) };
+  }
+  const re = new RegExp(kw.length <= 3 ? `\\b${kw}\\b` : `\\b${kw}`);
   return { kw, test: (s: string) => re.test(s) };
 });
 

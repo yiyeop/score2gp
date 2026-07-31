@@ -6,10 +6,13 @@ import { forDisplay, techniquesOfTrack } from "../../lib/techniques";
  * 지금 보고 있는 트랙에 나오는 주법 목록.
  * 악보를 훑기 전에 "이 곡에 뭐가 나오는지" 미리 볼 수 있게 한다.
  * 항목을 누르면 처음 나오는 마디로 이동한다.
+ *
+ * 여기 토글은 목록만이 아니라 주법 안내 전체를 끄고 켠다.
+ * 끄면 악보 위 툴팁도 함께 사라진다.
  */
 export function TechniqueList({ player }: { player: PlayerHandle }) {
   const [openId, setOpenId] = useState<string | null>(null);
-  const [shown, setShown] = useState(true);
+  const shown = player.techniqueGuide;
 
   const items = useMemo(() => {
     const tracks = player.score?.tracks;
@@ -29,10 +32,14 @@ export function TechniqueList({ player }: { player: PlayerHandle }) {
           type="button"
           className={`chip${shown ? " chip--active" : ""}`}
           aria-expanded={shown}
-          onClick={() => setShown(!shown)}
-          title={shown ? "주법 목록 숨기기" : "주법 목록 보기"}
+          onClick={player.toggleTechniqueGuide}
+          title={
+            shown
+              ? "주법 안내 끄기 (악보 위 툴팁도 함께 꺼집니다)"
+              : "주법 안내 켜기 (악보 위 툴팁도 함께 켜집니다)"
+          }
         >
-          {shown ? "숨기기" : `보기 ${items.length}`}
+          {shown ? "끄기" : `켜기 ${items.length}`}
         </button>
       </div>
       {shown && (
