@@ -1,5 +1,6 @@
 import * as alphaTab from "@coderline/alphatab";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { detectScoreEncoding, isGarbled } from "../lib/detectEncoding";
 
 export interface TrackView {
   index: number;
@@ -29,6 +30,7 @@ export function useAlphaTab() {
   const apiRef = useRef<alphaTab.AlphaTabApi | null>(null);
   const barStartsRef = useRef<number[]>([]);
   const currentBarRef = useRef(0);
+  const lastBytesRef = useRef<Uint8Array | null>(null);
 
   const [score, setScore] = useState<alphaTab.model.Score | null>(null);
   const [scoreTitle, setScoreTitle] = useState("");
@@ -45,6 +47,8 @@ export function useAlphaTab() {
   const [metronomeOn, setMetronomeOn] = useState(false);
   const [countInOn, setCountInOn] = useState(false);
   const [tabOnly, setTabOnly] = useState(false);
+  const [encoding, setEncodingState] = useState("utf-8");
+  const [isGarbledText, setIsGarbledText] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -70,6 +74,7 @@ export function useAlphaTab() {
 
     api.scoreLoaded.on((s) => {
       setScore(s);
+      setIsGarbledText(isGarbled(s));
       setScoreTitle(s.title || "제목 없음");
       setBarCount(s.masterBars.length);
       currentBarRef.current = 0;
@@ -125,15 +130,42 @@ export function useAlphaTab() {
     };
   }, []);
 
-  const loadBytes = useCallback((data: Uint8Array) => {
+  const loadWithEncoding = useCallback((data: Uint8Array, enc: string) => {
+    const api = apiRef.current;
+    if (!api) return;
     setIsLoading(true);
     setError(null);
-    apiRef.current?.load(data);
+    lastBytesRef.current = data;
+    api.settings.importer.encoding = enc;
+    api.updateSettings();
+    setEncodingState(enc);
+    api.load(data);
   }, []);
+
+  const loadBytes = useCallback(
+    (data: Uint8Array) => {
+      // 파일마다 문자 인코딩이 다르므로 로드 전에 먼저 판별한다.
+      loadWithEncoding(data, detectScoreEncoding(data));
+    },
+    [loadWithEncoding],
+  );
+
+  /** 자동 판별이 틀렸을 때 사용자가 직접 인코딩을 지정해 다시 읽는다. */
+  const setEncoding = useCallback(
+    (enc: string) => {
+      const data = lastBytesRef.current;
+      if (data) loadWithEncoding(data, enc);
+    },
+    [loadWithEncoding],
+  );
 
   const loadTex = useCallback((tex: string) => {
     setIsLoading(true);
     setError(null);
+    // alphaTex는 문자열 입력이라 인코딩과 무관하다. 이전 파일의 인코딩 상태를 지운다.
+    lastBytesRef.current = null;
+    setIsGarbledText(false);
+    setEncodingState("utf-8");
     apiRef.current?.tex(tex);
   }, []);
 
@@ -278,9 +310,12 @@ export function useAlphaTab() {
     metronomeOn,
     countInOn,
     tabOnly,
+    encoding,
+    isGarbledText,
     error,
     loadBytes,
     loadTex,
+    setEncoding,
     playPause,
     stop,
     goToBar,

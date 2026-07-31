@@ -3,7 +3,7 @@ import { useAlphaTab } from "./player/useAlphaTab";
 import { useShortcuts } from "./shortcuts/useShortcuts";
 import { APP_MODES, type AppModeId } from "./modes/registry";
 import { buildReadShortcuts } from "./modes/read/readShortcuts";
-import { TrackList } from "./modes/read/TrackList";
+import { ReadSidebar } from "./modes/read/ReadSidebar";
 import { TransportBar } from "./modes/read/TransportBar";
 import { ShortcutHelp } from "./modes/read/ShortcutHelp";
 import { EditModeBar, EditModeSidebar } from "./modes/edit/EditMode";
@@ -70,7 +70,7 @@ function App() {
 
       <div className="app-body">
         {mode === "read" ? (
-          <TrackList player={player} />
+          <ReadSidebar player={player} />
         ) : (
           <EditModeSidebar player={player} />
         )}

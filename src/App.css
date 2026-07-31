@@ -110,7 +110,7 @@ button.primary {
   min-height: 0;
 }
 
-.track-list {
+.sidebar {
   width: 230px;
   flex-shrink: 0;
   background: var(--panel);
@@ -172,6 +172,34 @@ button.primary {
   color: var(--text-dim);
   width: 38px;
   text-align: right;
+}
+
+.encoding {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--panel-border);
+}
+.encoding__hint {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+.encoding--warn .encoding__hint {
+  color: #f0ad4e;
+}
+.encoding select {
+  width: 100%;
+  font: inherit;
+  font-size: 12px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+.encoding--warn select {
+  border-color: #f0ad4e;
 }
 
 .chip {

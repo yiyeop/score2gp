@@ -13,7 +13,7 @@ import type { PlayerHandle } from "../../player/useAlphaTab";
  */
 export function EditModeSidebar(_props: { player: PlayerHandle }) {
   return (
-    <aside className="track-list track-list--empty">
+    <aside className="sidebar track-list--empty">
       <h2 className="panel-title">편집 도구</h2>
       <p>
         편집 모드는 준비 중입니다.

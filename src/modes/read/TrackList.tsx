@@ -4,14 +4,14 @@ import type { PlayerHandle } from "../../player/useAlphaTab";
 export function TrackList({ player }: { player: PlayerHandle }) {
   if (player.tracks.length === 0) {
     return (
-      <aside className="track-list track-list--empty">
+      <section className="track-list track-list--empty">
         <p>악보를 열면 트랙이 여기에 표시됩니다.</p>
-      </aside>
+      </section>
     );
   }
 
   return (
-    <aside className="track-list">
+    <section className="track-list">
       <h2 className="panel-title">트랙</h2>
       {player.tracks.map((t) => (
         <div className={`track-item${t.mute ? " track-item--muted" : ""}`} key={t.index}>
@@ -57,6 +57,6 @@ export function TrackList({ player }: { player: PlayerHandle }) {
           </label>
         </div>
       ))}
-    </aside>
+    </section>
   );
 }
