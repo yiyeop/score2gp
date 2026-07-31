@@ -221,7 +221,12 @@ export function useAlphaTab() {
     const api = apiRef.current;
     if (!api?.score) return;
     const v = clamp(Math.round(semitones), TRANSPOSE_MIN, TRANSPOSE_MAX);
-    api.changeTrackTranspositionPitch([...api.score.tracks], v);
+    // 드럼은 조옮김에서 제외한다. 타악기는 음높이가 아니라 악기 종류를 가리켜서
+    // 키를 옮기면 다른 타악기가 나거나 소리가 사라진다. 게다가 alphaTab은
+    // 울리고 있는 음의 키를 보정할 때 타악기 채널만 건너뛰기 때문에,
+    // 조옮김을 반복하면 note-off가 매칭되지 않아 드럼 음이 물린다.
+    const pitched = api.score.tracks.filter((t) => !t.isPercussion);
+    if (pitched.length > 0) api.changeTrackTranspositionPitch(pitched, v);
     setTransposeState(v);
   }, []);
 
