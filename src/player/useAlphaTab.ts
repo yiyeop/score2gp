@@ -81,6 +81,11 @@ export function useAlphaTab() {
     apiRef.current = api;
 
     api.scoreLoaded.on((s) => {
+      // 아래에서 React 상태를 모두 기본값으로 되돌리므로, 신디사이저 쪽도 같이 맞춘다.
+      // resetChannelStates는 볼륨까지는 지우지 않아서 따로 원래대로 돌린다.
+      api.player?.resetChannelStates();
+      if (s.tracks.length > 0) api.changeTrackVolume([...s.tracks], 1);
+
       setScore(s);
       setIsGarbledText(isGarbled(s));
       setScoreTitle(s.title || "제목 없음");
@@ -284,16 +289,14 @@ export function useAlphaTab() {
   const toggleTabOnly = useCallback(() => {
     const api = apiRef.current;
     if (!api) return;
-    setTabOnly((prev) => {
-      const next = !prev;
-      api.settings.display.staveProfile = next
-        ? alphaTab.StaveProfile.Tab
-        : alphaTab.StaveProfile.Default;
-      api.updateSettings();
-      api.render();
-      return next;
-    });
-  }, []);
+    const next = !tabOnly;
+    api.settings.display.staveProfile = next
+      ? alphaTab.StaveProfile.Tab
+      : alphaTab.StaveProfile.Default;
+    api.updateSettings();
+    api.render();
+    setTabOnly(next);
+  }, [tabOnly]);
 
   const setTrackVolume = useCallback((trackIndex: number, volume: number) => {
     const api = apiRef.current;
@@ -306,31 +309,38 @@ export function useAlphaTab() {
     );
   }, []);
 
-  const toggleTrackMute = useCallback((trackIndex: number) => {
-    const api = apiRef.current;
-    const track = api?.score?.tracks[trackIndex];
-    if (!api || !track) return;
-    setTracks((prev) =>
-      prev.map((t) => {
-        if (t.index !== trackIndex) return t;
-        api.changeTrackMute([track], !t.mute);
-        return { ...t, mute: !t.mute };
-      }),
-    );
-  }, []);
+  // 아래 두 토글은 신디사이저 호출을 setTracks 업데이터 밖에서 한다.
+  // 업데이터 안에 두면 StrictMode가 업데이터를 두 번 실행하면서
+  // 엔진 호출도 두 번 나가고, 상태와 엔진이 어긋날 여지가 생긴다.
+  const toggleTrackMute = useCallback(
+    (trackIndex: number) => {
+      const api = apiRef.current;
+      const track = api?.score?.tracks[trackIndex];
+      const current = tracks.find((t) => t.index === trackIndex);
+      if (!api || !track || !current) return;
+      const mute = !current.mute;
+      api.changeTrackMute([track], mute);
+      setTracks((prev) =>
+        prev.map((t) => (t.index === trackIndex ? { ...t, mute } : t)),
+      );
+    },
+    [tracks],
+  );
 
-  const toggleTrackSolo = useCallback((trackIndex: number) => {
-    const api = apiRef.current;
-    const track = api?.score?.tracks[trackIndex];
-    if (!api || !track) return;
-    setTracks((prev) =>
-      prev.map((t) => {
-        if (t.index !== trackIndex) return t;
-        api.changeTrackSolo([track], !t.solo);
-        return { ...t, solo: !t.solo };
-      }),
-    );
-  }, []);
+  const toggleTrackSolo = useCallback(
+    (trackIndex: number) => {
+      const api = apiRef.current;
+      const track = api?.score?.tracks[trackIndex];
+      const current = tracks.find((t) => t.index === trackIndex);
+      if (!api || !track || !current) return;
+      const solo = !current.solo;
+      api.changeTrackSolo([track], solo);
+      setTracks((prev) =>
+        prev.map((t) => (t.index === trackIndex ? { ...t, solo } : t)),
+      );
+    },
+    [tracks],
+  );
 
   return {
     containerRef,
