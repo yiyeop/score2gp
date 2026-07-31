@@ -19,6 +19,8 @@ export const READ_SHORTCUT_DOCS: ShortcutDoc[] = [
   { keys: "L", label: "전체 반복 켜기 / 끄기" },
   { keys: "M", label: "메트로놈 켜기 / 끄기" },
   { keys: "N", label: "타브만 보기 / 오선보 같이 보기" },
+  { keys: "1 ~ 9", label: "해당 번호 트랙의 악보만 보기" },
+  { keys: "0", label: "모든 트랙 악보 함께 보기" },
   { keys: "?", label: "단축키 도움말" },
 ];
 
@@ -26,7 +28,14 @@ export function buildReadShortcuts(
   player: PlayerHandle,
   toggleHelp: () => void,
 ): ShortcutMap {
+  // 숫자 키로 트랙 악보 전환 (1 = 첫 트랙, 0 = 전체)
+  const trackKeys: ShortcutMap = { "0": () => player.showAllTracks() };
+  for (let n = 1; n <= 9; n++) {
+    trackKeys[String(n)] = () => player.showTracks([n - 1]);
+  }
+
   return {
+    ...trackKeys,
     Space: () => player.playPause(),
     Escape: () => player.stop(),
     ArrowLeft: () => player.seekBars(-1),

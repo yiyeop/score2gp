@@ -130,12 +130,34 @@ button.primary {
   letter-spacing: 0.08em;
   color: var(--text-dim);
 }
+.track-list__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.track-list__head .panel-title {
+  margin-bottom: 0;
+}
+.track-list__hint {
+  margin: 8px 0 12px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
 .track-item {
   padding: 10px;
   border: 1px solid var(--panel-border);
   border-radius: 8px;
   margin-bottom: 8px;
   background: var(--bg);
+  border-left: 3px solid transparent;
+}
+/* 지금 악보가 화면에 그려지고 있는 트랙 */
+.track-item--visible {
+  border-left-color: var(--accent);
+  background: var(--accent-soft);
 }
 .track-item--muted {
   opacity: 0.55;
@@ -148,11 +170,21 @@ button.primary {
   margin-bottom: 8px;
 }
 .track-item__name {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
   font-size: 13px;
   font-weight: 600;
+  padding: 2px 4px;
+  background: transparent;
+  border: none;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.track-item__name:hover:not(:disabled) {
+  color: var(--accent);
+  border: none;
 }
 .track-item__buttons {
   display: flex;

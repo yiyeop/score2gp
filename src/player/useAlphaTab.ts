@@ -3,6 +3,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { detectScoreEncoding, isGarbled } from "../lib/detectEncoding";
 
 export interface TrackView {
+  /**
+   * `score.tracks` 배열에서의 위치.
+   *
+   * alphaTab의 `Track.index`는 파일에 기록된 트랙 번호라 배열 위치와 다를 수 있다
+   * (실제 Guitar Pro 파일에서 확인됨). 훅 안팎을 모두 배열 위치로 통일해야
+   * 뮤트/솔로/보기가 엉뚱한 트랙에 적용되지 않는다.
+   */
   index: number;
   name: string;
   /** 0 ~ 1.5, 1 = 원본 볼륨 */
@@ -47,6 +54,7 @@ export function useAlphaTab() {
   const [metronomeOn, setMetronomeOn] = useState(false);
   const [countInOn, setCountInOn] = useState(false);
   const [tabOnly, setTabOnly] = useState(false);
+  const [visibleTracks, setVisibleTracks] = useState<number[]>([0]);
   const [encoding, setEncodingState] = useState("utf-8");
   const [isGarbledText, setIsGarbledText] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -82,10 +90,12 @@ export function useAlphaTab() {
       setTransposeState(0);
       setIsLoading(false);
       setError(null);
+      // alphaTab은 로드 후 첫 트랙만 그리므로 상태를 거기에 맞춘다.
+      setVisibleTracks([0]);
       setTracks(
-        s.tracks.map((t) => ({
-          index: t.index,
-          name: t.name || `트랙 ${t.index + 1}`,
+        s.tracks.map((t, i) => ({
+          index: i,
+          name: t.name || `트랙 ${i + 1}`,
           volume: 1,
           mute: false,
           solo: false,
@@ -241,6 +251,36 @@ export function useAlphaTab() {
     setCountInOn(on);
   }, []);
 
+  /**
+   * 화면에 악보를 그릴 트랙을 지정한다.
+   * 재생은 모든 트랙이 계속되며, 소리는 뮤트/솔로로 따로 조절한다.
+   */
+  const showTracks = useCallback((indices: number[]) => {
+    const api = apiRef.current;
+    const all = api?.score?.tracks;
+    if (!api || !all) return;
+    const positions = indices.filter((i) => i >= 0 && i < all.length);
+    if (positions.length === 0) return; // 최소 한 트랙은 보여야 한다
+    api.renderTracks(positions.map((i) => all[i]));
+    setVisibleTracks(positions);
+  }, []);
+
+  /** 보기 목록에 트랙을 추가/제거 (여러 트랙 동시 보기) */
+  const toggleTrackVisible = useCallback(
+    (trackIndex: number) => {
+      const next = visibleTracks.includes(trackIndex)
+        ? visibleTracks.filter((i) => i !== trackIndex)
+        : [...visibleTracks, trackIndex].sort((a, b) => a - b);
+      showTracks(next);
+    },
+    [visibleTracks, showTracks],
+  );
+
+  const showAllTracks = useCallback(() => {
+    const all = apiRef.current?.score?.tracks;
+    if (all) showTracks(all.map((_, i) => i));
+  }, [showTracks]);
+
   const toggleTabOnly = useCallback(() => {
     const api = apiRef.current;
     if (!api) return;
@@ -310,6 +350,7 @@ export function useAlphaTab() {
     metronomeOn,
     countInOn,
     tabOnly,
+    visibleTracks,
     encoding,
     isGarbledText,
     error,
@@ -327,6 +368,9 @@ export function useAlphaTab() {
     toggleMetronome,
     toggleCountIn,
     toggleTabOnly,
+    showTracks,
+    toggleTrackVisible,
+    showAllTracks,
     setTrackVolume,
     toggleTrackMute,
     toggleTrackSolo,
