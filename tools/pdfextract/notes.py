@@ -109,12 +109,21 @@ def extract_bars(
     glyphs,
     v_lines,
     beams,
+    barlines: list[float] | None = None,
 ) -> tuple[list[Bar], int]:
-    """한 악기의 한 시스템 분량을 마디별로 뽑는다."""
+    """한 악기의 한 시스템 분량을 마디별로 뽑는다.
+
+    `barlines`를 주면 그걸 쓴다. 같은 시스템의 악기들은 마디선이 같으므로,
+    시스템 전체에서 합의한 위치를 넘겨주면 보표 하나만 보고 판단할 때보다
+    안정적이다. TAB 없는 보표(보컬 등)는 음표 기둥이 마디선으로 오인되기
+    쉬워서 특히 도움이 된다.
+    """
     if not track.score:
         return [], 0
 
-    edges = bar_edges(track, detect_barlines(track, v_lines))
+    if barlines is None:
+        barlines = detect_barlines(track, v_lines)
+    edges = bar_edges(track, barlines)
     frets = extract_frets(track.tab, glyphs) if track.tab else []
     ref: Staff = track.tab or track.score
     tolerance = ref.gap * 1.2
