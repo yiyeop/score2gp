@@ -82,10 +82,21 @@ const TONE_KEYWORDS = [
   "볼륨",
 ];
 
+/**
+ * 영어 키워드는 단어 경계까지 맞춰야 한다.
+ * 부분 일치로 두면 가사의 "hood"가 "od"(overdrive 약어)에 걸리는 식으로 오탐이 난다.
+ * 한글은 단어 경계 개념이 달라서 그대로 포함 검사한다.
+ */
+const KEYWORD_MATCHERS = TONE_KEYWORDS.map((kw) => {
+  if (!/^[a-z][a-z ]*$/.test(kw)) return { kw, test: (s: string) => s.includes(kw) };
+  const re = new RegExp(`\\b${kw}\\b`);
+  return { kw, test: (s: string) => re.test(s) };
+});
+
 function matchToneKeyword(text: string): string | null {
   const lower = text.toLowerCase();
-  for (const kw of TONE_KEYWORDS) {
-    if (lower.includes(kw)) return kw;
+  for (const m of KEYWORD_MATCHERS) {
+    if (m.test(lower)) return m.kw;
   }
   return null;
 }

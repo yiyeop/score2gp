@@ -21,6 +21,12 @@ export interface Technique {
   name: string;
   /** 초보자용 한 줄 설명 */
   hint: string;
+  /**
+   * 설명 없이도 대부분 아는 기본 주법.
+   * 너무 자주 나와서 안내가 오히려 방해가 되므로 툴팁과 목록에서 뺀다.
+   * 감지 자체는 그대로 하므로 이 값만 지우면 다시 보인다.
+   */
+  basic?: boolean;
 }
 
 const T = (id: string, short: string, name: string, hint: string): Technique => ({
@@ -28,6 +34,12 @@ const T = (id: string, short: string, name: string, hint: string): Technique => 
   short,
   name,
   hint,
+});
+
+/** 기본 주법으로 표시 (툴팁·목록에서 제외됨) */
+const B = (id: string, short: string, name: string, hint: string): Technique => ({
+  ...T(id, short, name, hint),
+  basic: true,
 });
 
 /**
@@ -109,7 +121,7 @@ export const TECHNIQUES = {
     "탭 하모닉스",
     "누른 음에서 정확히 12프렛 위 지점을 손가락으로 톡 쳐서 하모닉스를 냅니다.",
   ),
-  bend: T(
+  bend: B(
     "bend",
     "bend",
     "밴딩(초킹)",
@@ -139,19 +151,19 @@ export const TECHNIQUES = {
     "레트 링",
     "친 음을 손으로 막지 말고 계속 울리게 둡니다.",
   ),
-  deadNote: T(
+  deadNote: B(
     "deadNote",
     "×",
     "데드 노트",
     "줄을 누르지 않고 살짝 막은 채 튕깁니다. 음정 없이 '툭' 소리만 납니다.",
   ),
-  ghostNote: T(
+  ghostNote: B(
     "ghostNote",
     "( )",
     "고스트 노트",
     "아주 여리게 스치듯 치는 음입니다. 리듬만 살짝 채워줍니다.",
   ),
-  staccato: T(
+  staccato: B(
     "staccato",
     "stacc.",
     "스타카토",
@@ -181,25 +193,33 @@ export const TECHNIQUES = {
     "팝",
     "손가락으로 줄을 잡아당겼다 놓아 튕겨냅니다. 슬랩과 짝으로 씁니다.",
   ),
-  brush: T(
+  brush: B(
     "brush",
     "strum",
     "브러시(스트로크)",
     "여러 줄을 한 번에 쓸어내리거나 쓸어올립니다.",
   ),
-  grace: T(
+  grace: B(
     "grace",
     "grace",
     "꾸밈음",
     "박자를 거의 차지하지 않는 짧은 장식음입니다. 본 음 직전에 스치듯 냅니다.",
   ),
-  fadeIn: T(
+  fadeIn: B(
     "fadeIn",
     "fade in",
     "페이드 인",
     "볼륨 노브를 0에서 서서히 올려 소리가 스며들게 합니다.",
   ),
 } satisfies Record<string, Technique>;
+
+/**
+ * 화면에 보여줄 주법만 남긴다.
+ * 감지는 전부 해두고 걸러내는 건 여기 한 곳에서만 한다.
+ */
+export function forDisplay<T extends Technique>(list: T[]): T[] {
+  return list.filter((t) => !t.basic);
+}
 
 /** 한 비트에 쓰인 주법을 모은다 (비트 자체 + 그 비트의 모든 음) */
 export function techniquesOfBeat(beat: alphaTab.model.Beat): Technique[] {

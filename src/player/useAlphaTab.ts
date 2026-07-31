@@ -1,7 +1,7 @@
 import * as alphaTab from "@coderline/alphatab";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { detectScoreEncoding, isGarbled } from "../lib/detectEncoding";
-import { techniquesOfBeat, type Technique } from "../lib/techniques";
+import { forDisplay, techniquesOfBeat, type Technique } from "../lib/techniques";
 
 export interface TechniqueHover {
   techniques: Technique[];
@@ -169,7 +169,7 @@ export function useAlphaTab() {
       if (beat === hoveredBeat) return; // 같은 음 위에서는 다시 계산하지 않는다
 
       hoveredBeat = beat;
-      const techniques = techniquesOfBeat(beat);
+      const techniques = forDisplay(techniquesOfBeat(beat));
       if (techniques.length === 0) return setHover(null);
 
       // 커서가 아니라 음 자체에 붙여야 툴팁이 흔들리지 않는다.
