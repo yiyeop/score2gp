@@ -273,8 +273,11 @@ def extract_frets(tab: Staff, glyphs: list[Glyph]) -> list[FretMark]:
             and abs(prev.y - cy) < 1.0
             and t.isdigit()
             and prev.text.isdigit()
+            # 프렛은 최대 두 자리(0~24)다. 이 제약이 없으면 빠른 패시지에서
+            # 이웃한 프렛까지 이어붙어 '121412' 같은 값이 나온다.
+            and len(prev.text) < 2
             # 두 자리 수의 글자는 살짝 겹쳐 그려지기도 해서 음수 간격을 허용한다
-            and -1.5 <= g.x0 - prev.right <= (g.x1 - g.x0) * 0.8
+            and -1.5 <= g.x0 - prev.right <= (g.x1 - g.x0) * 0.5
         ):
             prev.text += t
             prev.right = g.x1

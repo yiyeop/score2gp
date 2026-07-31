@@ -1,8 +1,10 @@
-"""마디별 음길이 합으로 리듬 판정을 자동 검증한다.
+"""추출 품질을 자동으로 잰다.
 
-리듬을 제대로 읽었다면 4/4 마디의 길이 합은 정확히 4박이 된다.
-악보를 눈으로 대조하지 않고도 판정 오류를 잡아낼 수 있어,
-휴리스틱을 고칠 때마다 회귀를 확인하는 용도로 쓴다.
+악보를 눈으로 대조하지 않고도 회귀를 잡을 수 있도록 두 가지를 본다.
+
+1. **마디 길이** — 리듬을 제대로 읽었다면 4/4 마디의 합은 정확히 4박이다.
+2. **프렛 결합률** — 쉼표가 아닌 소리에 짚는 자리가 붙었는지.
+   오선보 음표는 읽었는데 TAB을 못 붙였거나 그 반대면 여기서 드러난다.
 
     python verify.py <악보.pdf> [기대박자(기본 4)]
 """
@@ -14,9 +16,8 @@ from fractions import Fraction
 
 import fitz
 
-from dump import bar_edges
-from rhythm import extract_events
-from structure import detect_barlines, detect_staves, pair_tracks, read_page
+from notes import extract_bars
+from structure import detect_staves, pair_tracks, read_page
 
 
 def main() -> None:
@@ -27,7 +28,9 @@ def main() -> None:
     expected = Fraction(sys.argv[2]) if len(sys.argv) > 2 else Fraction(4)
 
     doc = fitz.open(path)
-    total = ok = 0
+    bars_total = bars_ok = 0
+    sounds = sounds_with_frets = 0
+    orphans_total = 0
     problems: list[str] = []
 
     for pno in range(len(doc)):
@@ -38,31 +41,41 @@ def main() -> None:
         for ti, t in enumerate(tracks):
             if not t.score:
                 continue
-            edges = bar_edges(t, detect_barlines(t, v_lines))
-            for bi in range(len(edges) - 1):
-                lo, hi = edges[bi], edges[bi + 1]
-                events = extract_events(t.score, glyphs, v_lines, beams, lo, hi)
-                if not events:
-                    continue
-                total += 1
-                s = sum(Fraction(e.beats).limit_denominator(64) for e in events)
-                if s == expected:
-                    ok += 1
-                else:
-                    detail = " ".join(
-                        f"{'R' if e.is_rest else 'N'}1/{e.denom}{'.' * e.dots}"
-                        for e in events
-                    )
-                    problems.append(
-                        f"  p{pno + 1} 슬롯{ti} 마디{bi + 1}: 합계 {float(s):.3f}박 "
-                        f"({len(events)}개) {detail[:96]}"
-                    )
+            bars, orphans = extract_bars(t, glyphs, v_lines, beams)
+            orphans_total += orphans
 
-    rate = ok / total * 100 if total else 0
-    print(f"검사한 마디 {total}개 중 박자 일치 {ok}개 ({rate:.1f}%)\n")
+            for bar in bars:
+                if not bar.beats:
+                    continue
+                bars_total += 1
+                total = sum(
+                    Fraction(b.quarters).limit_denominator(64) for b in bar.beats
+                )
+                if total == expected:
+                    bars_ok += 1
+                else:
+                    detail = " ".join(str(b) for b in bar.beats)
+                    problems.append(
+                        f"  p{pno + 1} 슬롯{ti} 마디{bar.index + 1}: "
+                        f"{float(total):.2f}박  {detail[:88]}"
+                    )
+                for b in bar.beats:
+                    if b.is_rest:
+                        continue
+                    sounds += 1
+                    if b.notes:
+                        sounds_with_frets += 1
+
+    def pct(a: int, b: int) -> str:
+        return f"{a / b * 100:5.1f}%" if b else "  n/a"
+
+    print(f"마디 길이 일치 : {bars_ok:5}/{bars_total:<5} {pct(bars_ok, bars_total)}")
+    print(f"프렛 결합률    : {sounds_with_frets:5}/{sounds:<5} {pct(sounds_with_frets, sounds)}")
+    print(f"짝 못 찾은 TAB : {orphans_total}개")
+
     if problems:
-        print(f"어긋난 마디 {len(problems)}개 (앞 25개):")
-        for p in problems[:25]:
+        print(f"\n길이가 어긋난 마디 {len(problems)}개 (앞 15개):")
+        for p in problems[:15]:
             print(p)
 
 
