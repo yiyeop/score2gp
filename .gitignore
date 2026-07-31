@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Python 프로토타입 도구 (tools/)
+__pycache__/
+*.py[cod]
+.venv/
