@@ -1,0 +1,398 @@
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  --bg: #16181d;
+  --panel: #1e2128;
+  --panel-border: #2c3038;
+  --text: #e8eaed;
+  --text-dim: #9aa0a8;
+  --accent: #4f8cff;
+  --accent-soft: rgba(79, 140, 255, 0.18);
+  font-family: "Pretendard", "Apple SD Gothic Neo", system-ui, -apple-system,
+    sans-serif;
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* ── 헤더 ─────────────────────────── */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--panel-border);
+}
+.header__logo {
+  font-weight: 700;
+  font-size: 15px;
+  white-space: nowrap;
+}
+.header__modes {
+  display: flex;
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+}
+.mode-tab {
+  border: none;
+  background: transparent;
+  padding: 5px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.mode-tab--active {
+  background: var(--accent);
+  color: #fff;
+}
+.header__title {
+  flex: 1;
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.header__actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ── 본문 ─────────────────────────── */
+.app-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.track-list {
+  width: 230px;
+  flex-shrink: 0;
+  background: var(--panel);
+  border-right: 1px solid var(--panel-border);
+  padding: 14px;
+  overflow-y: auto;
+}
+.track-list--empty p {
+  color: var(--text-dim);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.panel-title {
+  margin: 0 0 12px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+}
+.track-item {
+  padding: 10px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  background: var(--bg);
+}
+.track-item--muted {
+  opacity: 0.55;
+}
+.track-item__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.track-item__name {
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.track-item__buttons {
+  display: flex;
+  gap: 4px;
+}
+.track-item__volume {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.track-item__volume input[type="range"] {
+  flex: 1;
+  min-width: 0;
+}
+.track-item__volume-value {
+  font-size: 11px;
+  color: var(--text-dim);
+  width: 38px;
+  text-align: right;
+}
+
+.chip {
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 5px;
+}
+.chip--active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.chip--active.chip--mute {
+  background: #d9534f;
+  border-color: #d9534f;
+}
+.chip--active.chip--solo {
+  background: #f0ad4e;
+  border-color: #f0ad4e;
+  color: #222;
+}
+
+/* ── 악보 영역 ─────────────────────── */
+.score-viewport {
+  flex: 1;
+  position: relative;
+  overflow-y: auto;
+  background: #f5f2ea;
+}
+.score-surface {
+  background: #fff;
+  min-height: 100%;
+}
+
+.empty-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #555;
+  background: #f5f2ea;
+  padding: 24px;
+}
+.empty-state h1 {
+  margin: 0 0 8px;
+  font-size: 22px;
+  color: #333;
+}
+.empty-state p {
+  margin: 0 0 20px;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.empty-state__actions {
+  display: flex;
+  gap: 10px;
+}
+.empty-state button {
+  background: #fff;
+  color: #333;
+  border-color: #ccc;
+}
+.empty-state button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.loading {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--panel);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.error-banner {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #5c2b29;
+  border: 1px solid #d9534f;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  max-width: 80%;
+}
+
+/* ── 하단 트랜스포트 바 ─────────────── */
+.transport {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 10px 16px;
+  background: var(--panel);
+  border-top: 1px solid var(--panel-border);
+  flex-wrap: wrap;
+}
+.transport--placeholder {
+  justify-content: center;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+.transport__group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.control-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.transport__play {
+  font-size: 16px;
+  width: 44px;
+  height: 36px;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.transport__stop {
+  width: 36px;
+  height: 36px;
+}
+.transport__bars button {
+  padding: 4px 8px;
+  font-size: 11px;
+}
+.transport__bar-label {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  min-width: 96px;
+  text-align: center;
+}
+.transport select {
+  font: inherit;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 5px 8px;
+}
+.transport__transpose-value {
+  min-width: 40px;
+  font-variant-numeric: tabular-nums;
+}
+.transport__volume input[type="range"] {
+  width: 110px;
+}
+.transport__toggles {
+  gap: 6px;
+}
+.transport__toggles .chip {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 10px;
+}
+.transport__help {
+  margin-left: auto;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+/* ── 단축키 오버레이 ────────────────── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.overlay__panel {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 20px 24px;
+  width: 420px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.overlay__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.overlay__head h2 {
+  margin: 0;
+  font-size: 16px;
+}
+.shortcut-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.shortcut-table td {
+  padding: 7px 4px;
+  border-bottom: 1px solid var(--panel-border);
+}
+.shortcut-table td:first-child {
+  width: 45%;
+}
+kbd {
+  background: var(--bg);
+  border: 1px solid var(--panel-border);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-family: inherit;
+}
