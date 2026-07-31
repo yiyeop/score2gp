@@ -1,6 +1,14 @@
 import * as alphaTab from "@coderline/alphatab";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { detectScoreEncoding, isGarbled } from "../lib/detectEncoding";
+import { techniquesOfBeat, type Technique } from "../lib/techniques";
+
+export interface TechniqueHover {
+  techniques: Technique[];
+  /** 화면 좌표. 툴팁을 해당 음 바로 위에 붙인다. */
+  x: number;
+  y: number;
+}
 
 export interface TrackView {
   /**
@@ -55,6 +63,7 @@ export function useAlphaTab() {
   const [countInOn, setCountInOn] = useState(false);
   const [tabOnly, setTabOnly] = useState(false);
   const [visibleTracks, setVisibleTracks] = useState<number[]>([0]);
+  const [hover, setHover] = useState<TechniqueHover | null>(null);
   const [encoding, setEncodingState] = useState("utf-8");
   const [isGarbledText, setIsGarbledText] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -139,7 +148,48 @@ export function useAlphaTab() {
       setError(err.message ?? String(err));
     });
 
+    // 악보 위에 마우스를 올리면 그 음에 쓰인 주법을 알려준다.
+    // alphaTab은 마우스를 누른 상태의 이동만 이벤트로 주기 때문에(구간 선택용),
+    // 단순 호버는 boundsLookup으로 직접 찾는다.
+    let hoveredBeat: alphaTab.model.Beat | null = null;
+    const clearHover = () => {
+      if (hoveredBeat) {
+        hoveredBeat = null;
+        setHover(null);
+      }
+    };
+    const onMouseMove = (e: MouseEvent) => {
+      const lookup = api.boundsLookup;
+      const surface = el.querySelector<HTMLElement>(".at-surface");
+      if (!lookup || !surface) return clearHover();
+
+      const rect = surface.getBoundingClientRect();
+      const beat = lookup.getBeatAtPos(e.clientX - rect.left, e.clientY - rect.top);
+      if (!beat) return clearHover();
+      if (beat === hoveredBeat) return; // 같은 음 위에서는 다시 계산하지 않는다
+
+      hoveredBeat = beat;
+      const techniques = techniquesOfBeat(beat);
+      if (techniques.length === 0) return setHover(null);
+
+      // 커서가 아니라 음 자체에 붙여야 툴팁이 흔들리지 않는다.
+      const bounds = lookup.findBeat(beat)?.visualBounds;
+      setHover({
+        techniques,
+        x: bounds ? rect.left + bounds.x + bounds.w / 2 : e.clientX,
+        y: bounds ? rect.top + bounds.y : e.clientY,
+      });
+    };
+
+    el.addEventListener("mousemove", onMouseMove);
+    el.addEventListener("mouseleave", clearHover);
+    const viewport = viewportRef.current;
+    viewport?.addEventListener("scroll", clearHover);
+
     return () => {
+      el.removeEventListener("mousemove", onMouseMove);
+      el.removeEventListener("mouseleave", clearHover);
+      viewport?.removeEventListener("scroll", clearHover);
       api.destroy();
       apiRef.current = null;
     };
@@ -366,6 +416,7 @@ export function useAlphaTab() {
     countInOn,
     tabOnly,
     visibleTracks,
+    hover,
     encoding,
     isGarbledText,
     error,

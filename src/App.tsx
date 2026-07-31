@@ -6,6 +6,7 @@ import { buildReadShortcuts } from "./modes/read/readShortcuts";
 import { ReadSidebar } from "./modes/read/ReadSidebar";
 import { TransportBar } from "./modes/read/TransportBar";
 import { Timeline } from "./modes/read/Timeline";
+import { TechniqueTooltip } from "./modes/read/TechniqueTooltip";
 import { ShortcutHelp } from "./modes/read/ShortcutHelp";
 import { EditModeBar, EditModeSidebar } from "./modes/edit/EditMode";
 import { openScoreFile } from "./lib/openScore";
@@ -112,6 +113,7 @@ function App() {
         <EditModeBar />
       )}
 
+      {mode === "read" && <TechniqueTooltip player={player} />}
       {helpOpen && <ShortcutHelp onClose={() => setHelpOpen(false)} />}
     </div>
   );

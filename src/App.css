@@ -206,6 +206,98 @@ button.primary {
   text-align: right;
 }
 
+/* ── 주법 목록 / 툴팁 ───────────────── */
+.techniques {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--panel-border);
+}
+.techniques__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.techniques__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  margin-bottom: 3px;
+  font-size: 12px;
+  text-align: left;
+  background: var(--bg);
+}
+.techniques__item--open {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.techniques__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.techniques__count {
+  font-size: 10px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+.techniques__detail {
+  padding: 4px 8px 10px;
+}
+.techniques__detail p {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--text-dim);
+}
+.techniques__jump {
+  width: 100%;
+  padding: 5px 8px;
+  font-size: 11px;
+}
+
+.technique-tip {
+  position: fixed;
+  z-index: 50;
+  transform: translate(-50%, calc(-100% - 10px));
+  max-width: 280px;
+  padding: 9px 12px;
+  background: #10131a;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+.technique-tip--below {
+  transform: translate(-50%, 26px);
+}
+.technique-tip__item + .technique-tip__item {
+  margin-top: 9px;
+  padding-top: 9px;
+  border-top: 1px solid var(--panel-border);
+}
+.technique-tip__head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+.technique-tip__head b {
+  font-size: 13px;
+}
+.technique-tip__short {
+  font-size: 10px;
+  color: var(--text-dim);
+}
+.technique-tip p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
 .encoding {
   margin-top: 18px;
   padding-top: 14px;

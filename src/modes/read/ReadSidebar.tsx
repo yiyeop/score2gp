@@ -1,6 +1,7 @@
 import type { PlayerHandle } from "../../player/useAlphaTab";
 import { ENCODING_CANDIDATES } from "../../lib/detectEncoding";
 import { TrackList } from "./TrackList";
+import { TechniqueList } from "./TechniqueList";
 
 /**
  * 글자 인코딩 선택.
@@ -40,6 +41,7 @@ export function ReadSidebar({ player }: { player: PlayerHandle }) {
   return (
     <aside className="sidebar">
       <TrackList player={player} />
+      <TechniqueList player={player} />
       <EncodingPicker player={player} />
     </aside>
   );
