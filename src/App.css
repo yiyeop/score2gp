@@ -340,6 +340,124 @@ button.primary {
   max-width: 80%;
 }
 
+/* ── 톤/구간 타임라인 ───────────────── */
+.timeline {
+  background: var(--panel);
+  border-top: 1px solid var(--panel-border);
+  padding: 8px 16px 4px;
+}
+.timeline__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 5px;
+}
+.timeline__now {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.timeline__count {
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.timeline__strip {
+  position: relative;
+  height: 22px;
+  background: var(--bg);
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+}
+.timeline__section {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+  border-right: 1px solid var(--panel-border);
+  font-size: 10px;
+  color: var(--text-dim);
+  overflow: hidden;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.timeline__section--active {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+.timeline__section span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.timeline__played {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  background: rgba(79, 140, 255, 0.16);
+  pointer-events: none;
+}
+.timeline__playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent);
+  pointer-events: none;
+}
+
+.timeline__tones {
+  position: relative;
+  height: 18px;
+}
+.timeline__tone {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.timeline__tone:hover {
+  color: var(--accent);
+  border: none;
+  z-index: 2;
+}
+.timeline__tone-dot {
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 5px solid #f0ad4e;
+}
+.timeline__tone-label {
+  font-size: 9px;
+  max-width: 74px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.timeline__tone:hover .timeline__tone-label {
+  max-width: none;
+  background: var(--panel);
+  border-radius: 3px;
+  padding: 0 3px;
+}
+
 /* ── 하단 트랜스포트 바 ─────────────── */
 .transport {
   display: flex;

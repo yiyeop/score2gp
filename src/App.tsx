@@ -5,6 +5,7 @@ import { APP_MODES, type AppModeId } from "./modes/registry";
 import { buildReadShortcuts } from "./modes/read/readShortcuts";
 import { ReadSidebar } from "./modes/read/ReadSidebar";
 import { TransportBar } from "./modes/read/TransportBar";
+import { Timeline } from "./modes/read/Timeline";
 import { ShortcutHelp } from "./modes/read/ShortcutHelp";
 import { EditModeBar, EditModeSidebar } from "./modes/edit/EditMode";
 import { openScoreFile } from "./lib/openScore";
@@ -103,7 +104,10 @@ function App() {
       </div>
 
       {mode === "read" ? (
-        <TransportBar player={player} onToggleHelp={() => setHelpOpen(true)} />
+        <>
+          <Timeline player={player} />
+          <TransportBar player={player} onToggleHelp={() => setHelpOpen(true)} />
+        </>
       ) : (
         <EditModeBar />
       )}
