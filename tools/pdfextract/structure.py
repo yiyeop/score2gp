@@ -53,8 +53,14 @@ class Glyph:
     y1: float
 
     @property
+    def profile(self):
+        from fonts import profile_for
+
+        return profile_for(self.font)
+
+    @property
     def is_music(self) -> bool:
-        return "Bravura" in self.font
+        return self.profile is not None
 
 
 @dataclass
