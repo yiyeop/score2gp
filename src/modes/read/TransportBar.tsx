@@ -151,6 +151,15 @@ export function TransportBar({
         >
           🥁 카운트인
         </button>
+        <button
+          type="button"
+          className={`chip${player.tabOnly ? " chip--active" : ""}`}
+          onClick={player.toggleTabOnly}
+          disabled={disabled}
+          title="오선보를 숨기고 타브 악보만 보기 (N)"
+        >
+          🎼 타브만
+        </button>
       </div>
 
       <button

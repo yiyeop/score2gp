@@ -207,6 +207,19 @@ button.primary {
   min-height: 100%;
 }
 
+/* alphaTab 재생 커서: 마디 하이라이트 + 진행 바 */
+.at-cursor-bar {
+  background: rgba(79, 140, 255, 0.12);
+}
+.at-cursor-beat {
+  background: rgba(79, 140, 255, 0.85);
+  width: 3px;
+}
+.at-highlight * {
+  fill: #2f6fe0;
+  stroke: #2f6fe0;
+}
+
 .empty-state {
   position: absolute;
   inset: 0;

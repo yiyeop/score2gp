@@ -44,6 +44,7 @@ export function useAlphaTab() {
   const [isLooping, setIsLooping] = useState(false);
   const [metronomeOn, setMetronomeOn] = useState(false);
   const [countInOn, setCountInOn] = useState(false);
+  const [tabOnly, setTabOnly] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -208,6 +209,20 @@ export function useAlphaTab() {
     setCountInOn(on);
   }, []);
 
+  const toggleTabOnly = useCallback(() => {
+    const api = apiRef.current;
+    if (!api) return;
+    setTabOnly((prev) => {
+      const next = !prev;
+      api.settings.display.staveProfile = next
+        ? alphaTab.StaveProfile.Tab
+        : alphaTab.StaveProfile.Default;
+      api.updateSettings();
+      api.render();
+      return next;
+    });
+  }, []);
+
   const setTrackVolume = useCallback((trackIndex: number, volume: number) => {
     const api = apiRef.current;
     const track = api?.score?.tracks[trackIndex];
@@ -262,6 +277,7 @@ export function useAlphaTab() {
     isLooping,
     metronomeOn,
     countInOn,
+    tabOnly,
     error,
     loadBytes,
     loadTex,
@@ -275,6 +291,7 @@ export function useAlphaTab() {
     toggleLoop,
     toggleMetronome,
     toggleCountIn,
+    toggleTabOnly,
     setTrackVolume,
     toggleTrackMute,
     toggleTrackSolo,

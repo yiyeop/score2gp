@@ -18,6 +18,7 @@ export const READ_SHORTCUT_DOCS: ShortcutDoc[] = [
   { keys: "[ / ]", label: "조옮김 반음 내리기 / 올리기" },
   { keys: "L", label: "전체 반복 켜기 / 끄기" },
   { keys: "M", label: "메트로놈 켜기 / 끄기" },
+  { keys: "N", label: "타브만 보기 / 오선보 같이 보기" },
   { keys: "?", label: "단축키 도움말" },
 ];
 
@@ -42,6 +43,7 @@ export function buildReadShortcuts(
     "]": () => player.setTranspose(player.transpose + 1),
     L: () => player.toggleLoop(),
     M: () => player.toggleMetronome(),
+    N: () => player.toggleTabOnly(),
     "?": () => toggleHelp(),
   };
 }
