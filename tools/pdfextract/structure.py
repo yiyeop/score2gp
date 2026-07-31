@@ -147,9 +147,15 @@ def read_page(page: fitz.Page):
                     h_segments[round(r.y0, 1)].append((r.x0, r.x1))
                 elif r.width < 1.5 and r.height > 2:
                     v_lines.append((r.x0, r.y0, r.y1))
-        # 빔: 채워진 다각형인데 오선처럼 얇지는 않은 것
+        # 빔은 채워진 가로로 긴 도형이다. 그리는 방식이 도구마다 다르다.
+        #   Guitar Pro — 기울어질 수 있어 선 4개짜리 다각형('l')
+        #   Finale     — 수평이라 사각형 하나('re')
+        # 이음줄·붙임줄도 채워진 도형이지만 곡선('c')을 포함하므로 제외한다.
+        # 가로세로 비율로는 가를 수 없다. 기울기가 급한 짧은 빔은 경계 상자가
+        # 거의 정사각형이라 비율 조건을 걸면 그런 빔이 통째로 빠진다.
         if filled and 3 < rect.width < 300 and 0.9 < rect.height < 30:
-            if all(i[0] == "l" for i in d["items"]):
+            shapes = {i[0] for i in d["items"]}
+            if shapes <= {"l", "re"}:
                 beams.append((rect.x0, rect.y0, rect.x1, rect.y1))
 
     glyphs: list[Glyph] = []

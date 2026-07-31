@@ -57,15 +57,25 @@ SMUFL = FontProfile(
 )
 
 # ── Maestro (Finale 계열) ────────────────────────────────────
-# 샘플에서 위치·개수로 확인한 것만 넣었다. 확인 못 한 기호는 비워 둔다.
-#   '˙' 머리(오선 위에 화음으로 쌓임), 'w' 온음표, '∑' 온쉼표
-#   'g'는 덧줄이라 머리가 아니다 — 넣으면 음표 수가 부풀어 오른다.
+# 글리프를 하나씩 잘라 눈으로 확인해 매핑했다(scratchpad/glyphsheet.py).
+# 코드값과 모양 사이에 규칙이 없어서 추측으로는 맞출 수 없다.
+#   'œ' 검은 머리(가장 많이 쓰임)   '˙' 흰 2분음표 머리   'w' 온음표
+#   U+F0C0 데드 노트(×)            '.' 점                'Œ' 4분쉼표
+#   '∑'·U+F0EE 온쉼표·2분쉼표      '&' 높은음자리표       'c' 4/4박자
+# 'g'는 덧줄이라 머리가 아니다 — 넣으면 음표 수가 부풀어 오른다.
 MAESTRO = FontProfile(
     name="maestro",
-    heads_black=frozenset({0x02D9}),
+    heads_black=frozenset({0x0153}),
+    heads_half=frozenset({0x02D9}),
     heads_whole=frozenset({0x0077}),
+    heads_dead=frozenset({0xF0C0}),
     dots=frozenset({0x002E}),
-    rests={0x2211: 1},
+    rests={
+        0x2211: 1,   # 온쉼표
+        0xF0EE: 2,   # 2분쉼표
+        0x0152: 4,   # 4분쉼표
+        0x2030: 8,   # 8분쉼표
+    },
 )
 
 _PROFILES = (
