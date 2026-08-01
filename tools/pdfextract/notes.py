@@ -101,6 +101,8 @@ class Beat:
     marks: list[tuple[str, str]] = field(default_factory=list)
     # 리듬 슬래시로 그려진 박 (직전 화음 반복)
     is_slash: bool = False
+    # 기둥 방향. 한 보표를 두 성부가 나눠 쓸 때 어느 쪽인지 가리는 근거다.
+    stem_up: bool | None = None
 
     def has(self, kind: str) -> bool:
         return any(k == kind for k, _ in self.marks)
@@ -133,10 +135,44 @@ class Bar:
     beats: list[Beat]
     x0: float
     x1: float
+    # 둘째 성부. 한 보표에 두 성부가 겹쳐 적힌 마디에서만 채워진다.
+    voice2: list[Beat] = field(default_factory=list)
 
     @property
     def quarters(self) -> float:
         return sum(b.quarters for b in self.beats)
+
+
+def split_voices(bar: Bar, expected: float = 4.0, eps: float = 1e-6) -> bool:
+    """한 보표에 겹쳐 적힌 두 성부를 기둥 방향으로 갈라놓는다.
+
+    기타 악보에서는 한 보표에 멜로디와 베이스를 위/아래 기둥으로 나눠
+    적는 일이 흔하다. 그대로 한 줄로 읽으면 두 성부의 길이가 더해져
+    마디가 넘친다.
+
+    다만 기둥 방향은 성부와 무관하게도 바뀐다(음 높이에 따라). 그래서
+    갈라봤을 때 **한쪽이 정확히 마디 길이와 맞아떨어질 때만** 나눈다.
+    아니라면 근거가 부족하므로 건드리지 않는다 — 잘못 나누면 멀쩡한
+    마디를 망가뜨린다.
+    """
+    if abs(bar.quarters - expected) < eps or len(bar.beats) < 2:
+        return False
+
+    up = [b for b in bar.beats if b.stem_up is True]
+    down = [b for b in bar.beats if b.stem_up is not True]
+    if not up or not down:
+        return False
+
+    total = lambda bs: sum(b.quarters for b in bs)  # noqa: E731
+    if abs(total(up) - expected) < eps:
+        main, second = up, down
+    elif abs(total(down) - expected) < eps:
+        main, second = down, up
+    else:
+        return False
+
+    bar.beats, bar.voice2 = main, second
+    return True
 
 
 def _to_notes(column: list[FretMark]) -> list[PlayedNote]:
@@ -205,6 +241,7 @@ def merge_bar(
             is_rest=e.is_rest,
             extra_beats=e.extra_beats,
             is_slash=e.is_slash,
+            stem_up=e.stem_up,
         )
         if not e.is_rest:
             best, best_d = None, tolerance
@@ -296,5 +333,7 @@ def extract_bars(
             ranges,
             ref.gap,
         )
-        bars.append(Bar(index=bi, beats=beats, x0=lo, x1=hi))
+        bar = Bar(index=bi, beats=beats, x0=lo, x1=hi)
+        split_voices(bar)
+        bars.append(bar)
     return bars, orphans

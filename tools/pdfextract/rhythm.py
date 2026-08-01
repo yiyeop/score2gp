@@ -42,6 +42,8 @@ class Event:
     heads: list[Glyph]  # 화음이면 여러 개
     # 리듬 슬래시(/)로 그려진 박. 직전 화음을 그대로 다시 친다는 뜻이다.
     is_slash: bool = False
+    # 기둥이 위로 뻗는지. 한 보표에 성부가 둘이면 위/아래로 갈라 적는다.
+    stem_up: bool | None = None
     # 밴딩 목표음을 병합하면서 흡수한 길이. denom/dots로는 표현 못 하는
     # 임의의 길이(예: 1/4 + 1/8)도 정확히 더할 수 있도록 별도로 둔다.
     extra_beats: float = 0.0
@@ -188,6 +190,7 @@ def extract_events(
     for col in columns:
         head = col[0]
         prof = head.profile
+        stem_up: bool | None = None
         if head.code in prof.heads_whole:
             denom = 1
         elif head.code in prof.heads_half:
@@ -201,6 +204,7 @@ def extract_events(
             if stem is None:
                 denom = 4
             else:
+                stem_up = stem.up
                 n = count_beams(stem, near_beams)
                 if n > 0:
                     denom = 4 * (2 ** n)
@@ -215,6 +219,7 @@ def extract_events(
                 is_rest=False,
                 heads=col,
                 is_slash=all(h.code in prof_slashes for h in col),
+                stem_up=stem_up,
             )
         )
 

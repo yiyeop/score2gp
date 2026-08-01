@@ -146,13 +146,31 @@ def _fill_measure(
     measure: gp.models.Measure,
     beats: list[Beat],
     next_bar_first: Beat | None = None,
+    voice2: list[Beat] | None = None,
+    two_voices: bool = False,
 ) -> None:
     """마디 하나를 채운다.
 
     슬라이드는 다음 음이 어디에 떨어지는지 알아야 해서, 마디 끝 음을 위해
     다음 마디의 첫 음까지 받는다.
+
+    한 보표에 두 성부가 겹쳐 적힌 마디라면 둘째 성부를 GP의 voice 2에 넣는다.
+    `two_voices`는 이 트랙이 어디서든 2성부를 쓰는지를 가리킨다 — 쓰는
+    트랙이라면 이 마디에 둘째 성부가 없어도 온쉼표로 채워 둔다. 마디마다
+    성부 수가 들쭉날쭉하면 재생기가 성부를 이어 붙이다 죽기 때문이다.
     """
-    voice = measure.voices[0]
+    _fill_voice(measure.voices[0], beats, next_bar_first)
+    if voice2:
+        _fill_voice(measure.voices[1], voice2, None)
+    elif two_voices:
+        _fill_voice(measure.voices[1], [])
+
+
+def _fill_voice(
+    voice: gp.models.Voice,
+    beats: list[Beat],
+    next_bar_first: Beat | None = None,
+) -> None:
     voice.beats.clear()
 
     if not beats:
@@ -249,13 +267,21 @@ def build_gp_song(song: Song, only_tab: bool = True) -> gp.models.Song:
         ]
 
         track.measures.clear()
+        two_voices = any(b.voice2 for b in part.bars)
         for bi in range(bar_count):
             measure = copy.deepcopy(template.measures[0])
             measure.track = track
             measure.header = out.measureHeaders[bi]
-            beats = part.bars[bi].beats if bi < len(part.bars) else []
+            bar = part.bars[bi] if bi < len(part.bars) else None
+            beats = bar.beats if bar else []
             nxt = part.bars[bi + 1].beats if bi + 1 < len(part.bars) else []
-            _fill_measure(measure, beats, nxt[0] if nxt else None)
+            _fill_measure(
+                measure,
+                beats,
+                nxt[0] if nxt else None,
+                bar.voice2 if bar else None,
+                two_voices,
+            )
             track.measures.append(measure)
 
         out.tracks.append(track)
