@@ -56,7 +56,7 @@ class Glyph:
     def profile(self):
         from fonts import profile_for
 
-        return profile_for(self.font)
+        return profile_for(self.font, self.code)
 
     @property
     def is_music(self) -> bool:
@@ -134,6 +134,24 @@ def read_page(page: fitz.Page):
     for d in page.get_drawings():
         rect = d["rect"]
         filled = d["type"] in ("f", "fs")
+        # 빔은 채워진 가로로 긴 도형이다. 그리는 방식이 도구마다 다르다.
+        #   Guitar Pro — 기울어질 수 있어 선 4개짜리 다각형('l')
+        #   Finale     — 수평이라 사각형 하나('re')
+        # 이음줄·붙임줄도 채워진 도형이지만 곡선('c')을 포함하므로 제외한다.
+        # 가로세로 비율로는 가를 수 없다. 기울기가 급한 짧은 빔은 경계 상자가
+        # 거의 정사각형이라 비율 조건을 걸면 그런 빔이 통째로 빠진다.
+        is_beam = (
+            filled
+            and 3 < rect.width < 300
+            and 0.9 < rect.height < 30
+            and {i[0] for i in d["items"]} <= {"l", "re"}
+        )
+        if is_beam:
+            beams.append((rect.x0, rect.y0, rect.x1, rect.y1))
+            # 빔의 위아래 모서리는 가로선이지만 보표 줄이 아니다. 8분음표가
+            # 이어지는 마디에서는 이 모서리가 오선 사이 높이에 깔려, 보표를
+            # '간격이 고른 5줄'로 찾는 눈을 흐린다.
+            continue
         for item in d["items"]:
             if item[0] == "l":
                 p1, p2 = item[1], item[2]
@@ -147,16 +165,6 @@ def read_page(page: fitz.Page):
                     h_segments[round(r.y0, 1)].append((r.x0, r.x1))
                 elif r.width < 1.5 and r.height > 2:
                     v_lines.append((r.x0, r.y0, r.y1))
-        # 빔은 채워진 가로로 긴 도형이다. 그리는 방식이 도구마다 다르다.
-        #   Guitar Pro — 기울어질 수 있어 선 4개짜리 다각형('l')
-        #   Finale     — 수평이라 사각형 하나('re')
-        # 이음줄·붙임줄도 채워진 도형이지만 곡선('c')을 포함하므로 제외한다.
-        # 가로세로 비율로는 가를 수 없다. 기울기가 급한 짧은 빔은 경계 상자가
-        # 거의 정사각형이라 비율 조건을 걸면 그런 빔이 통째로 빠진다.
-        if filled and 3 < rect.width < 300 and 0.9 < rect.height < 30:
-            shapes = {i[0] for i in d["items"]}
-            if shapes <= {"l", "re"}:
-                beams.append((rect.x0, rect.y0, rect.x1, rect.y1))
 
     glyphs: list[Glyph] = []
     for block in page.get_text("rawdict")["blocks"]:
@@ -312,12 +320,22 @@ def pair_tracks(staves: list[Staff]) -> list[TrackStaff]:
     return tracks
 
 
-def _staff_verticals(staff: Staff, v_lines) -> list[float]:
-    """한 보표를 위아래로 정확히 관통하는 세로선의 x 목록."""
+def _staff_verticals(staff: Staff, v_lines, may_overrun: bool = False) -> list[float]:
+    """한 보표를 위아래로 관통하는 세로선의 x 목록.
+
+    `may_overrun`이면 보표 아래끝을 지나쳐 더 내려가는 선도 인정한다.
+    보표 사이를 잇는 마디선을 '내 보표 위끝 → 다음 보표 위끝'으로 그리는
+    조판기(MuseScore)가 있어서, 아래끝이 딱 맞기를 바라면 놓친다.
+
+    지나침을 허용하면 아래로 길게 뻗은 음표 기둥도 걸릴 수 있다. 그래서
+    이 완화는 오선·TAB 양쪽에서 같은 x를 찾는 경우에만 쓴다 — TAB 안에는
+    기둥이 없으므로 양쪽에 동시에 나타나는 일이 없다.
+    """
     return sorted(
         x
         for x, y0, y1 in v_lines
-        if abs(y0 - staff.top) < 1.5 and abs(y1 - staff.bottom) < 1.5
+        if abs(y0 - staff.top) < 1.5
+        and (y1 > staff.bottom - 1.5 if may_overrun else abs(y1 - staff.bottom) < 1.5)
     )
 
 
@@ -328,7 +346,7 @@ def detect_barlines(track: TrackStaff, v_lines) -> list[float]:
     마디선을 그리는 방식은 제작 도구마다 달라서 두 가지를 모두 인정한다.
 
     1. 오선과 TAB을 한 줄로 관통 (Finale 계열)
-    2. 보표마다 따로 그리되 같은 x에 나타남 (Guitar Pro 계열)
+    2. 보표마다 따로 그리되 같은 x에 나타남 (Guitar Pro·MuseScore 계열)
     """
     found: list[float] = []
 
@@ -340,8 +358,8 @@ def detect_barlines(track: TrackStaff, v_lines) -> list[float]:
             if abs(y0 - track.score.top) < 2.0 and abs(y1 - track.tab.bottom) < 2.0
         ]
         # 2. 오선·TAB 양쪽에서 같은 x로 발견되는 세로선
-        a = _staff_verticals(track.score, v_lines)
-        b = _staff_verticals(track.tab, v_lines)
+        a = _staff_verticals(track.score, v_lines, may_overrun=True)
+        b = _staff_verticals(track.tab, v_lines, may_overrun=True)
         found += [x for x in a if any(abs(x - y) < 2.0 for y in b)]
         found.sort()
     else:

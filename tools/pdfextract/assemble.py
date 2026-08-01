@@ -77,11 +77,37 @@ def _period(kinds: list[str]) -> int:
     return n
 
 
+def _join_touching(v_lines) -> list[tuple[float, float, float]]:
+    """같은 x에서 끝과 끝이 맞닿은 세로선 토막을 하나로 잇는다.
+
+    시스템 괄호를 한 줄로 긋지 않고 보표 사이마다 토막 내어 그리는
+    조판기(MuseScore)가 있다. 토막만 보면 파트 하나 높이밖에 안 돼서
+    시스템이 파트별로 쪼개진다.
+    """
+    by_x: dict[float, list[tuple[float, float]]] = {}
+    for x, y0, y1 in v_lines:
+        by_x.setdefault(round(x, 1), []).append((y0, y1))
+
+    joined: list[tuple[float, float, float]] = []
+    for x, segs in by_x.items():
+        segs.sort()
+        cur0, cur1 = segs[0]
+        for y0, y1 in segs[1:]:
+            if y0 <= cur1 + 1.0:  # 맞닿았거나 살짝 겹친다
+                cur1 = max(cur1, y1)
+            else:
+                joined.append((x, cur0, cur1))
+                cur0, cur1 = y0, y1
+        joined.append((x, cur0, cur1))
+    return joined
+
+
 def split_systems(tracks: list[TrackStaff], v_lines) -> list[list[TrackStaff]]:
     """페이지의 보표들을 시스템 단위로 묶는다.
 
     악보 맨 왼쪽에는 한 시스템의 보표들을 위아래로 묶는 **시스템 괄호**가
-    세로줄로 그려진다. 이게 가장 확실한 단서다.
+    세로줄로 그려진다. 이게 가장 확실한 단서다. 다만 토막 내어 그리는
+    조판기가 있어서, 맞닿은 토막은 먼저 이어 붙인다.
 
     세로 간격은 못 쓴다 — 시스템 안쪽 간격이 시스템 사이보다 넓은 경우가
     실제로 있다. 마디선 위치도 못 쓴다 — 반복이 많은 곡은 여러 시스템의
@@ -98,7 +124,7 @@ def split_systems(tracks: list[TrackStaff], v_lines) -> list[list[TrackStaff]]:
     spans = sorted(
         (
             (y1 - y0, y0, y1)
-            for x, y0, y1 in v_lines
+            for x, y0, y1 in _join_touching(v_lines)
             if (y1 - y0) > 20 and any(e - 12 <= x <= e + 8 for e in edges)
         ),
         reverse=True,

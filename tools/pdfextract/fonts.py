@@ -92,19 +92,31 @@ MAESTRO = FontProfile(
 )
 
 _PROFILES = (
-    ("bravura", SMUFL),
+    ("bravura", SMUFL),   # Guitar Pro, Dorico 등
+    ("leland", SMUFL),    # MuseScore 4
+    ("petaluma", SMUFL),  # MuseScore 손글씨체
     ("maestro", MAESTRO),
 )
 
+# SMuFL이 음악 기호에 쓰기로 정한 사용자 영역 구간.
+# 레거시 Maestro는 ASCII와 U+F0xx를 쓰므로 여기 걸리지 않는다.
+SMUFL_RANGE = range(0xE000, 0xF000)
 
-def profile_for(font_name: str) -> FontProfile | None:
+
+def profile_for(font_name: str, code: int | None = None) -> FontProfile | None:
     """폰트 이름으로 프로파일을 고른다.
 
     PDF에 박힌 폰트 이름은 'HPCJIL+Maestro'처럼 서브셋 접두사가 붙거나
     'GPBravuraRegular'처럼 변형이 있어서 부분 일치로 찾는다.
+
+    이름을 모르는 폰트라도 글리프가 SMuFL 표준 영역에 있으면 표준으로 읽는다.
+    SMuFL은 규격이라 코드포인트가 같고, 조판 프로그램마다 폰트 이름을 새로
+    지어 붙이기 때문이다 — 이름을 일일이 등록하는 것보다 이쪽이 튼튼하다.
     """
     lowered = font_name.lower()
     for key, profile in _PROFILES:
         if key in lowered:
             return profile
+    if code is not None and code in SMUFL_RANGE:
+        return SMUFL
     return None
