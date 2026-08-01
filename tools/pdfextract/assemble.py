@@ -173,7 +173,27 @@ def consensus_barlines(
                 votes.append((x, 1))
 
     need = 2 if len(system) > 1 else 1
-    return sorted(x for x, n in votes if n >= need)
+    found = sorted(x for x, n in votes if n >= need)
+
+    # 보표가 하나뿐인 시스템(보컬만 나오는 줄 등)은 서로 대조할 상대가 없어서
+    # 음표 기둥이 마디선으로 섞여 들어온다. 마디 폭이 들쭉날쭉해지므로,
+    # 다른 마디에 비해 터무니없이 좁은 구간을 만드는 선을 걷어낸다.
+    if len(system) > 1 or len(found) < 3:
+        return found
+
+    while len(found) >= 3:
+        widths = [found[i + 1] - found[i] for i in range(len(found) - 1)]
+        typical = sorted(widths)[len(widths) // 2]
+        narrowest = min(range(len(widths)), key=lambda i: widths[i])
+        if widths[narrowest] >= typical * 0.45:
+            break
+        # 좁은 구간의 양 끝 중 이웃과 더 가까운 쪽을 지운다
+        left, right = narrowest, narrowest + 1
+        drop = right if right < len(found) - 1 else left
+        if left == 0:
+            drop = right
+        found.pop(drop)
+    return found
 
 
 TEMPO_RE = re.compile(r"=\s*(\d{2,3})")

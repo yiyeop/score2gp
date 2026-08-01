@@ -208,6 +208,13 @@ def build_gp_song(song: Song, only_tab: bool = True) -> gp.models.Song:
 
     bar_count = max(len(p.bars) for p in parts)
 
+    # 보표를 한 번 잘못 잡으면 몇 마디짜리 유령 악기가 생긴다.
+    # 곡 길이에 비해 터무니없이 짧은 악기는 실제 파트가 아니라고 본다.
+    real = [p for p in parts if len(p.bars) >= bar_count * 0.1]
+    if real:
+        parts = real
+        bar_count = max(len(p.bars) for p in parts)
+
     out = gp.models.Song()
     out.title = song.title or ""
     if song.tempo:
