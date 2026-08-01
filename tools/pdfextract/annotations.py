@@ -77,26 +77,45 @@ def classify(text: str) -> str:
     return "other"
 
 
-def collect(
-    glyphs: list[Glyph],
-    texts: list[tuple[float, float, str]],
-    staff: Staff,
-    x0: float,
-    x1: float,
-) -> list[Annotation]:
-    """한 보표 구간에 걸리는 주석을 모은다.
+# 점선 괄호로 '구간'을 나타내는 주법. 시작 음표 하나가 아니라
+# 괄호가 끝나는 곳까지의 모든 음표에 걸린다.
+RANGE_KINDS = frozenset({"palm_mute", "let_ring"})
 
-    주석은 보표 위(주법·톤)나 아래(P.M. 등)에 그려지므로 위아래로 넉넉히 본다.
+
+def collect(
+    texts: list[tuple[float, float, str]],
+    zone: tuple[float, float],
+) -> list[Annotation]:
+    """세로 구간(zone) 안에 있는 주석을 모은다.
+
+    zone은 이 악기의 몫으로 정해진 세로 범위다. 넉넉히 잡으면 아래 시스템의
+    지시까지 끌어오므로(실제로 Rhythm 2마디에 다음 시스템의 Distortion이
+    붙는 문제가 있었다) 이웃 악기와의 중간선으로 잘라서 넘겨받는다.
     """
-    span = staff.gap * 8
+    y0, y1 = zone
     out = []
     for x, y, t in texts:
-        if not (x0 - 2 < x < x1 + 2):
-            continue
-        if not (staff.top - span < y < staff.bottom + span):
+        if not (y0 <= y <= y1):
             continue
         kind = classify(t)
         if kind == "other":
             continue
         out.append(Annotation(x=x, y=y, text=t.strip()))
     return sorted(out, key=lambda a: a.x)
+
+
+def range_end(a: Annotation, h_segments, fallback: float) -> float:
+    """P.M.·let ring 점선 괄호가 어디서 끝나는지 찾는다.
+
+    괄호는 글자 바로 위에 가로선으로 그려진다. 같은 줄에 여러 개가 있어도
+    사이가 뚜렷이 벌어져 있어서, 글자 오른쪽에서 가장 먼저 시작하는 선을
+    고르면 그 구간이 된다.
+    """
+    best = None
+    for y, segs in h_segments.items():
+        if abs(y - a.y) > 3.5:
+            continue
+        for x0, x1 in segs:
+            if x0 >= a.x - 2 and (best is None or x0 < best[0]):
+                best = (x0, x1)
+    return best[1] if best else fallback

@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from annotations import Annotation, collect
+from annotations import RANGE_KINDS, Annotation, collect, range_end
 from dump import bar_edges, group_chords
 from rhythm import BEND_ARROW, Event, extract_events
 from structure import FretMark, Staff, TrackStaff, detect_barlines, extract_frets
@@ -34,21 +34,29 @@ def _page_texts(glyphs):
 
 
 def attach_marks(
-    beats: list[Beat], marks: list[Annotation], gap: float
+    beats: list[Beat],
+    marks: list[Annotation],
+    ranges: list[tuple[Annotation, float]],
+    gap: float,
 ) -> None:
-    """주석을 가장 가까운 소리에 붙인다.
+    """주석을 소리에 붙인다.
 
-    주석은 해당 음표의 바로 위나 아래에 그려지므로 x가 가장 가까운 소리를
-    고른다. 톤 지시(Distortion 등)는 그 자리부터 바뀌는 것이라 조금 더
-    넉넉한 범위를 허용한다.
+    한 음표에만 걸리는 것(슬라이드·톤 등)은 x가 가장 가까운 소리에 붙이고,
+    구간을 나타내는 것(P.M.·let ring)은 괄호가 끝날 때까지의 모든 소리에 건다.
     """
-    if not beats or not marks:
+    if not beats:
         return
+
     for a in marks:
         limit = gap * 6 if a.kind == "tone" else gap * 2.5
         best = min(beats, key=lambda b: abs(b.x - a.x))
         if abs(best.x - a.x) <= limit:
             best.marks.append((a.kind, a.text))
+
+    for a, end in ranges:
+        for b in beats:
+            if a.x - gap * 2 <= b.x <= end + gap:
+                b.marks.append((a.kind, a.text))
 
 
 @dataclass
@@ -208,6 +216,8 @@ def extract_bars(
     v_lines,
     beams,
     barlines: list[float] | None = None,
+    h_segments=None,
+    zone: tuple[float, float] | None = None,
 ) -> tuple[list[Bar], int]:
     """한 악기의 한 시스템 분량을 마디별로 뽑는다.
 
@@ -226,7 +236,18 @@ def extract_bars(
     ref: Staff = track.tab or track.score
     tolerance = ref.gap * 1.2
 
-    texts = _page_texts(glyphs)
+    # 주석은 마디가 아니라 이 악기 전체를 기준으로 한 번만 모은다.
+    # P.M. 구간이 마디를 넘어 이어질 수 있어서 마디별로 자르면 안 된다.
+    if zone is None:
+        zone = (track.score.top - ref.gap * 5, (track.tab or track.score).bottom)
+    marks_all = collect(_page_texts(glyphs), zone)
+
+    points = [a for a in marks_all if a.kind not in RANGE_KINDS]
+    ranges = [
+        (a, range_end(a, h_segments, edges[-1]) if h_segments else a.x)
+        for a in marks_all
+        if a.kind in RANGE_KINDS
+    ]
 
     bars: list[Bar] = []
     orphans = 0
@@ -236,6 +257,11 @@ def extract_bars(
         columns = group_chords([m for m in frets if lo < m.x < hi])
         beats, left = merge_bar(events, columns, tolerance, glyphs, lo, hi)
         orphans += left
-        attach_marks(beats, collect(glyphs, texts, ref, lo, hi), ref.gap)
+        attach_marks(
+            beats,
+            [a for a in points if lo - 2 < a.x < hi + 2],
+            ranges,
+            ref.gap,
+        )
         bars.append(Bar(index=bi, beats=beats, x0=lo, x1=hi))
     return bars, orphans

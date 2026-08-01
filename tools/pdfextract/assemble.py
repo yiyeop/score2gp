@@ -133,6 +133,24 @@ def split_systems(tracks: list[TrackStaff], v_lines) -> list[list[TrackStaff]]:
     return result
 
 
+def annotation_zones(
+    tracks: list[TrackStaff],
+) -> dict[int, tuple[float, float]]:
+    """악기마다 '이 지시는 내 것' 이라고 볼 세로 범위를 정한다.
+
+    주법·톤 지시는 보표 위에 적히는데, 넉넉히 잡으면 아래 시스템의 지시까지
+    끌어온다(실제로 Rhythm 2마디에 다음 시스템의 Distortion이 붙었다).
+    이웃 악기와의 중간선으로 잘라 서로 침범하지 않게 한다.
+    """
+    ordered = sorted(tracks, key=lambda t: t.top)
+    zones: dict[int, tuple[float, float]] = {}
+    for i, t in enumerate(ordered):
+        above = ordered[i - 1].bottom if i > 0 else t.top - 40
+        below = ordered[i + 1].top if i + 1 < len(ordered) else t.bottom + 20
+        zones[id(t)] = ((above + t.top) / 2, (t.bottom + below) / 2)
+    return zones
+
+
 def consensus_barlines(
     system: list[TrackStaff], v_lines, tolerance: float = 2.5
 ) -> list[float]:
@@ -238,6 +256,8 @@ def assemble(path: str) -> Song:
             names = _track_names(glyphs, systems)
             tuning = parse_tuning(glyphs)
 
+        zones = annotation_zones(tracks)
+
         for system in systems:
             shared = consensus_barlines(system, v_lines)
             # 쉬는 악기의 보표를 빼고 찍는 악보가 있어서 시스템마다 보표 수가
@@ -258,7 +278,13 @@ def assemble(path: str) -> Song:
                 if part.name is None and pno == 0:
                     part.name = names.get(round(track.top))
                 bars, _orphans = extract_bars(
-                    track, glyphs, v_lines, beams, barlines=shared
+                    track,
+                    glyphs,
+                    v_lines,
+                    beams,
+                    barlines=shared,
+                    h_segments=h_seg,
+                    zone=zones.get(id(track)),
                 )
                 part.bars.extend(bars)
 
