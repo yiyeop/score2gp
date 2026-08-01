@@ -47,6 +47,10 @@ def main() -> None:
                     f"  파트{part.index} 마디{bar.index + 1}: "
                     f"{float(total):.2f}박  {detail[:88]}"
                 )
+            # 프렛 결합률은 TAB이 있는 악기만 센다. 보컬 보표는 프렛이 아예
+            # 없으니 분모에 넣으면 수치가 실제보다 나쁘게 나온다.
+            if not part.has_tab:
+                continue
             for b in bar.beats:
                 if b.is_rest:
                     continue

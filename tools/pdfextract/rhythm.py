@@ -68,13 +68,18 @@ def find_stem(head: Glyph, v_lines, tolerance: float = 1.2) -> Stem | None:
     """음표 머리에 붙은 기둥을 찾는다.
 
     기둥은 머리의 오른쪽 끝(위로 뻗음) 또는 왼쪽 끝(아래로 뻗음)에 닿는다.
+
+    세로로는 넉넉히 본다. 리듬 슬래시(/)처럼 글리프의 기준점이 기둥이 닿는
+    자리와 어긋나 있는 경우가 있어서, 딱 맞게 보면 기둥을 놓치고 전부
+    4분음표로 읽힌다(실제로 Finale 악보에서 이 때문에 길이가 틀렸다).
     """
     cy = head.y  # 글리프 origin의 y가 머리의 세로 중심
+    reach = 5.5
     best: Stem | None = None
     for x, y0, y1 in v_lines:
         if y1 - y0 < 3:
             continue
-        if not (y0 - 2 <= cy <= y1 + 2):
+        if not (y0 - reach <= cy <= y1 + reach):
             continue
         if abs(x - head.x1) <= tolerance:
             up = True
