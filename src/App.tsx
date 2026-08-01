@@ -9,9 +9,11 @@ import { Timeline } from "./modes/read/Timeline";
 import { TechniqueTooltip } from "./modes/read/TechniqueTooltip";
 import { ShortcutHelp } from "./modes/read/ShortcutHelp";
 import { EditModeBar, EditModeSidebar } from "./modes/edit/EditMode";
-import { openScoreFile } from "./lib/openScore";
+import { convertPdfFile, openScoreFile } from "./lib/openScore";
 import { DEMO_SONG_TEX } from "./demo/demoSong";
 import "./App.css";
+
+const isTauri = () => "__TAURI_INTERNALS__" in window;
 
 function App() {
   // 악보 뷰(alphaTab)는 모드와 무관하게 App이 소유한다.
@@ -20,6 +22,8 @@ function App() {
   const [mode, setMode] = useState<AppModeId>("read");
   const [helpOpen, setHelpOpen] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [converting, setConverting] = useState(false);
+  const [convertError, setConvertError] = useState<string | null>(null);
 
   useShortcuts(
     buildReadShortcuts(player, () => setHelpOpen((v) => !v)),
@@ -37,6 +41,22 @@ function App() {
   const handleDemo = () => {
     setFileName(null);
     player.loadTex(DEMO_SONG_TEX);
+  };
+
+  const handleConvert = async () => {
+    setConvertError(null);
+    setConverting(true);
+    try {
+      const converted = await convertPdfFile();
+      if (converted) {
+        setFileName(converted.name);
+        player.loadBytes(converted.data);
+      }
+    } catch (e) {
+      setConvertError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setConverting(false);
+    }
   };
 
   return (
@@ -64,6 +84,11 @@ function App() {
           <button type="button" onClick={handleDemo}>
             데모 곡
           </button>
+          {isTauri() && (
+            <button type="button" onClick={handleConvert} disabled={converting}>
+              {converting ? "변환 중…" : "PDF 변환"}
+            </button>
+          )}
           <button type="button" className="primary" onClick={handleOpen}>
             악보 열기
           </button>
@@ -84,6 +109,12 @@ function App() {
               <h1>악보를 열어보세요</h1>
               <p>
                 Guitar Pro 파일(.gp, .gp3~.gpx)이나 MusicXML을 열 수 있어요.
+                {isTauri() && (
+                  <>
+                    <br />
+                    악보 <b>PDF</b>를 넣으면 연주할 수 있게 바꿔줍니다.
+                  </>
+                )}
                 <br />
                 처음이라면 <b>데모 곡</b> 버튼으로 바로 체험해보세요.
               </p>
@@ -91,15 +122,29 @@ function App() {
                 <button type="button" className="primary" onClick={handleOpen}>
                   악보 파일 열기
                 </button>
+                {isTauri() && (
+                  <button
+                    type="button"
+                    onClick={handleConvert}
+                    disabled={converting}
+                  >
+                    {converting ? "변환 중…" : "PDF 변환하기"}
+                  </button>
+                )}
                 <button type="button" onClick={handleDemo}>
                   데모 곡 재생해보기
                 </button>
               </div>
             </div>
           )}
+          {converting && (
+            <div className="loading">
+              PDF를 악보로 바꾸는 중… (몇 초 걸릴 수 있어요)
+            </div>
+          )}
           {player.isLoading && <div className="loading">악보 불러오는 중…</div>}
-          {player.error && (
-            <div className="error-banner">⚠️ {player.error}</div>
+          {(player.error || convertError) && (
+            <div className="error-banner">⚠️ {convertError ?? player.error}</div>
           )}
         </main>
       </div>

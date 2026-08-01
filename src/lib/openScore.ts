@@ -49,3 +49,36 @@ export async function openScoreFile(): Promise<OpenedScore | null> {
     input.click();
   });
 }
+
+export interface ConvertResult {
+  output: string;
+  log: string;
+}
+
+/**
+ * PDF 악보를 Guitar Pro 파일로 변환해 연다.
+ *
+ * 변환은 네이티브 쪽에서 돌아가므로 앱(Tauri)에서만 쓸 수 있다.
+ * 브라우저로 열어 개발할 때는 이 기능이 보이지 않는다.
+ */
+export async function convertPdfFile(): Promise<
+  (OpenedScore & { log: string }) | null
+> {
+    if (!isTauri()) {
+    throw new Error("PDF 변환은 앱에서만 됩니다");
+  }
+
+  const { open } = await import("@tauri-apps/plugin-dialog");
+  const { invoke } = await import("@tauri-apps/api/core");
+
+  const path = await open({
+    multiple: false,
+    filters: [{ name: "PDF 악보", extensions: ["pdf"] }],
+  });
+  if (!path) return null;
+
+  const result = await invoke<ConvertResult>("convert_pdf", { path });
+  const data = await invoke<number[]>("read_score", { path: result.output });
+  const name = path.replace(/\\/g, "/").split("/").pop() ?? path;
+  return { name, data: new Uint8Array(data), log: result.log };
+}

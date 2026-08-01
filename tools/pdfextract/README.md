@@ -35,6 +35,10 @@ python3 -m venv .venv && .venv/bin/pip install pymupdf
 .venv/bin/python convert.py "악보.pdf" out.gp5
 ```
 
+앱의 **PDF 변환** 버튼도 이 `convert.py`를 부른다. 앱은 `tools/pdfextract/.venv`를
+먼저 찾고 없으면 시스템 `python3`을 쓰므로, 위 명령으로 가상환경을 만들어 두면
+앱에서도 바로 동작한다.
+
 ### 품질은 두 지표로 자동 측정한다
 
 악보를 눈으로 대조하는 건 느리고 놓치기 쉬워서, `verify.py`가 전 페이지를
