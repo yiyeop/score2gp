@@ -214,6 +214,16 @@ def detect_staves(h_segments, page_width: float) -> list[Staff]:
             dev = max(abs(g - mean) for g in gaps) / mean
             if dev > 0.06:
                 continue
+            # 한 보표의 줄들은 함께 그려져서 시작과 끝이 나란하다. 덧줄은
+            # 다르다 — 오선 위로 나간 음표마다 하나씩 붙는데, 그 높이가 정확히
+            # 한 칸 위라서 줄 하나처럼 보인다. 음표가 많으면 덮인 길이도 충분해
+            # 5줄 오선이 6줄 TAB으로 잡히고, 그 파트가 통째로 어긋난다.
+            # 덧줄은 마디 안쪽에만 있어 시스템 가장자리까지 닿지 않는다.
+            lefts = [r[1] for r in run]
+            rights = [r[2] for r in run]
+            slack = max(max(lefts) - min(lefts), max(rights) - min(rights))
+            if slack > max(6.0, (max(rights) - min(lefts)) * 0.05):
+                continue
             windows.append((dev, -count, i, count, kind, run))
 
     # 줄 수가 많은 것부터 확정한다. 6줄 TAB 안에는 5줄짜리 균일 구간이

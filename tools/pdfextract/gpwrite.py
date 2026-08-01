@@ -54,6 +54,21 @@ def quarters_to_duration(quarters: float) -> gp.models.Duration:
     return gp.models.Duration(value=best[1], isDotted=best[2])
 
 
+def beat_duration(beat: Beat) -> gp.models.Duration:
+    """한 박의 GP 길이. 잇단음표는 비율을 따로 실어 보낸다.
+
+    셋잇단 4분음표는 2/3박이라 표준 길이표에 없다. 가까운 값으로 반올림하면
+    마디가 어그러지므로, 적힌 음표 값(4분)에 잇단음표 비율을 붙여 넘긴다.
+    """
+    if beat.ratio == 1:
+        return quarters_to_duration(beat.quarters)
+    d = quarters_to_duration((4 / beat.denom) * (2 - 0.5**beat.dots))
+    d.tuplet = gp.models.Tuplet(
+        enters=beat.ratio.denominator, times=beat.ratio.numerator
+    )
+    return d
+
+
 def _string_to_gp(string: int) -> int:
     """TAB의 현 번호(1 = 가장 높은 음)를 그대로 쓴다.
 
@@ -185,7 +200,7 @@ def _fill_voice(
     for i, b in enumerate(beats):
         following = beats[i + 1] if i + 1 < len(beats) else next_bar_first
         gbeat = gp.models.Beat(voice=voice)
-        gbeat.duration = quarters_to_duration(b.quarters)
+        gbeat.duration = beat_duration(b)
 
         # 악보에 적힌 지시는 글로도 남긴다. 원본과 대조하기 쉽고,
         # GP 이펙트로 옮기지 못한 것(Delay 등)도 정보가 사라지지 않는다.
@@ -297,7 +312,34 @@ def write_gp5(
     GP5는 문자열을 UTF-8이 아닌 로컬 인코딩으로 담는다. 기본값(cp1252)으로는
     한글 제목·트랙명을 쓸 수 없어 인코딩을 명시한다. 앱 쪽 리더는 이미
     EUC-KR/CP949 자동 판별을 하므로 그대로 읽힌다.
+
+    cp949에 없는 글자(일본어·이모지 등)가 제목에 섞여 있으면 저장이 통째로
+    실패한다. 글자 몇 개 때문에 변환 전체를 버리는 것보다는, 못 쓰는 글자만
+    떨어내고 소리를 살리는 편이 낫다.
     """
     out = build_gp_song(song, only_tab=only_tab)
+    _strip_unencodable(out, encoding)
     gp.write(out, path, encoding=encoding)
     return out
+
+
+def _strip_unencodable(out: gp.models.Song, encoding: str) -> None:
+    """저장할 인코딩으로 못 쓰는 글자를 걸러낸다."""
+
+    def clean(text: str | None) -> str:
+        if not text:
+            return text or ""
+        return text.encode(encoding, "ignore").decode(encoding, "ignore")
+
+    out.title = clean(out.title)
+    out.artist = clean(out.artist)
+    out.album = clean(out.album)
+    for track in out.tracks:
+        track.name = clean(track.name)
+        for measure in track.measures:
+            for voice in measure.voices:
+                for beat in voice.beats:
+                    if isinstance(beat.text, str):
+                        beat.text = clean(beat.text)
+                    elif beat.text is not None:
+                        beat.text.value = clean(beat.text.value)

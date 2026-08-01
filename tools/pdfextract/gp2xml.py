@@ -68,6 +68,8 @@ def write_note(
     chord: bool,
     string: int | None = None,
     fret: int | None = None,
+    tuplet: tuple[int, int] | None = None,
+    bracket: str | None = None,
 ) -> None:
     note = sub(measure, "note")
     if chord:
@@ -84,11 +86,19 @@ def write_note(
         sub(note, "type", type_name)
     for _ in range(dots):
         sub(note, "dot")
+    if tuplet:
+        tm = sub(note, "time-modification")
+        sub(tm, "actual-notes", str(tuplet[0]))
+        sub(tm, "normal-notes", str(tuplet[1]))
     sub(note, "staff", str(staff))
-    if string is not None:
-        tech = sub(sub(note, "notations"), "technical")
-        sub(tech, "string", str(string))
-        sub(tech, "fret", str(fret))
+    if string is not None or bracket:
+        notations = sub(note, "notations")
+        if bracket:
+            sub(notations, "tuplet").set("type", bracket)
+        if string is not None:
+            tech = sub(notations, "technical")
+            sub(tech, "string", str(string))
+            sub(tech, "fret", str(fret))
 
 
 def write_rest(measure: ET.Element, dur: int, type_name: str, staff: int) -> None:
@@ -104,6 +114,31 @@ def write_rest(measure: ET.Element, dur: int, type_name: str, staff: int) -> Non
 def duration_type(beat: gp.models.Beat) -> tuple[str, int]:
     d = beat.duration
     return _TYPE_NAMES.get(d.value, "quarter"), (1 if d.isDotted else 0)
+
+
+def tuplet_brackets(beats) -> list[str | None]:
+    """잇단음표 묶음의 처음과 끝에 붙일 표시를 정한다.
+
+    MuseScore는 이 표시를 보고 '3' 숫자와 대괄호를 그린다. 없으면 잇단음표
+    였다는 흔적이 인쇄물에 남지 않는다.
+    """
+    marks: list[str | None] = [None] * len(beats)
+    run: list[int] = []
+
+    def close() -> None:
+        if len(run) >= 2:
+            marks[run[0]] = "start"
+            marks[run[-1]] = "stop"
+        run.clear()
+
+    for i, b in enumerate(beats):
+        t = b.duration.tuplet
+        if t and t.enters != t.times:
+            run.append(i)
+        else:
+            close()
+    close()
+    return marks
 
 
 def add_attributes(measure: ET.Element, track: gp.models.Track, num: int, den: int) -> None:
@@ -182,10 +217,13 @@ def convert(song: gp.models.Song, tracks: list[int]) -> ET.ElementTree:
                     back = sub(m, "backup")
                     back.append(_dur(total))
                     total = 0
-                for b in beats:
+                brackets = tuplet_brackets(beats)
+                for bi_, b in enumerate(beats):
                     q = beat_quarters(b)
                     dur = int(q * DIVISIONS)
                     tname, dots = duration_type(b)
+                    tup = b.duration.tuplet
+                    ratio = (tup.enters, tup.times) if tup and tup.enters != tup.times else None
                     if b.status == gp.models.BeatStatus.rest or not b.notes:
                         write_rest(m, dur, tname, staff)
                     else:
@@ -194,6 +232,8 @@ def convert(song: gp.models.Song, tracks: list[int]) -> ET.ElementTree:
                                 m, note.realValue, dur, tname, dots, staff, k > 0,
                                 string=note.string if staff == 2 else None,
                                 fret=note.value if staff == 2 else None,
+                                tuplet=ratio,
+                                bracket=brackets[bi_] if k == 0 else None,
                             )
                     total += dur
 

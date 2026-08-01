@@ -14,6 +14,7 @@ TAB에는 프렛만 있고 길이 정보가 없다. 길이는 위에 짝지어�
 from __future__ import annotations
 
 from dataclasses import dataclass
+from fractions import Fraction
 
 from structure import Glyph, Staff
 
@@ -47,12 +48,14 @@ class Event:
     # 밴딩 목표음을 병합하면서 흡수한 길이. denom/dots로는 표현 못 하는
     # 임의의 길이(예: 1/4 + 1/8)도 정확히 더할 수 있도록 별도로 둔다.
     extra_beats: float = 0.0
+    # 잇단음표 비율. 셋잇단음표면 2/3 — 적힌 음표 셋이 둘 길이만큼만 간다.
+    ratio: Fraction = Fraction(1)
 
     @property
     def beats(self) -> float:
         """4분음표를 1로 봤을 때의 길이."""
         base = 4 / self.denom
-        return base * (2 - 0.5 ** self.dots) + self.extra_beats
+        return base * (2 - 0.5 ** self.dots) * float(self.ratio) + self.extra_beats
 
 
 # 밴딩 화살표 글리프 (SMuFL PUA). 목표음이 이 글리프와 x범위가 겹치면
@@ -238,3 +241,96 @@ def extract_events(
 
     events.sort(key=lambda e: e.x)
     return events
+
+
+# 잇단음표 표시는 어느 조판기든 보통 글자 숫자로 찍는다(Edwin, Times, Verdana…).
+# 숫자 → (묶이는 음표 수, 길이 비율). 셋잇단음표면 셋이 둘 길이만큼 간다.
+#
+# 다섯·여섯잇단음표도 같은 방식이지만 손에 있는 악보에 없어서 넣지 않았다.
+# 근거 없이 넓히면 가사나 코드 이름의 숫자에 걸려 멀쩡한 마디를 망친다.
+TUPLETS = {"3": (3, Fraction(2, 3))}
+
+
+def _tuplet_marks(
+    glyphs: list[Glyph],
+    staff: Staff,
+    lo: float,
+    hi: float,
+    floor_y: float | None,
+) -> list[tuple[float, int, Fraction]]:
+    """마디 안에서 잇단음표 숫자를 찾는다.
+
+    TAB의 프렛도 같은 글자라서 오선 언저리만 본다. 실측하면 숫자는 오선
+    위로 약 2칸, 또는 아래로 3~4칸 자리에 앉는다. `floor_y`(TAB 윗줄)를
+    주면 그 아래는 보지 않는다 — 거기 있는 숫자는 프렛이다.
+    """
+    band = staff.gap * 4.5
+    out: list[tuple[float, int, Fraction]] = []
+    for g in glyphs:
+        spec = TUPLETS.get(g.char)
+        if spec is None or g.is_music or not (lo < g.x0 < hi):
+            continue
+        if floor_y is not None and g.y > floor_y - 1.0:
+            continue
+        above = staff.top - band < g.y < staff.top - staff.gap * 0.5
+        below = staff.bottom + staff.gap * 0.5 < g.y < staff.bottom + band
+        if above or below:
+            out.append((g.x0, spec[0], spec[1]))
+    return out
+
+
+def _pick_group(events: list[Event], mark_x: float, size: int, reach: float):
+    """숫자가 가리키는 묶음을 고른다.
+
+    숫자는 묶음 가운데에 놓이므로, 가운데 음표가 숫자에 가장 가까운
+    연속 묶음을 고른다. 길이가 제각각인 묶음은 잇단음표로 보지 않는다 —
+    같은 길이 음표가 나란한 것이 흔한 모양이고, 아니면 근거가 약하다.
+    """
+    best = None
+    for i in range(len(events) - size + 1):
+        run = events[i : i + size]
+        if any(e.ratio != 1 or e.extra_beats for e in run):
+            continue
+        if len({(e.denom, e.dots) for e in run}) != 1:
+            continue
+        d = abs(run[size // 2].x - mark_x)
+        if d < reach and (best is None or d < best[0]):
+            best = (d, i)
+    return None if best is None else best[1]
+
+
+def apply_tuplets(
+    events: list[Event],
+    glyphs: list[Glyph],
+    staff: Staff,
+    lo: float,
+    hi: float,
+    floor_y: float | None = None,
+    expected: float = 4.0,
+) -> bool:
+    """잇단음표 표시를 찾아 그 묶음의 길이를 줄인다.
+
+    숫자 하나로 판단하기에는 근거가 약하다 — 가사나 코드 이름에 섞인 숫자도
+    있고, 어느 음표까지 묶이는지는 표시만 봐서는 알 수 없다. 그래서 줄여본
+    결과가 **마디 길이와 정확히 맞아떨어질 때만** 받아들인다. 아니면 되돌린다.
+    """
+    marks = _tuplet_marks(glyphs, staff, lo, hi, floor_y)
+    if not marks or not events:
+        return False
+
+    touched: list[tuple[Event, Fraction]] = []
+    for mark_x, size, ratio in sorted(marks):
+        i = _pick_group(events, mark_x, size, staff.gap * 4)
+        if i is None:
+            continue
+        for e in events[i : i + size]:
+            touched.append((e, e.ratio))
+            e.ratio = ratio
+
+    if not touched:
+        return False
+    if abs(sum(e.beats for e in events) - expected) < 1e-6:
+        return True
+    for e, old in touched:
+        e.ratio = old
+    return False

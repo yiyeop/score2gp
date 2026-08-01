@@ -10,10 +10,11 @@ x좌표로 짝지으면 '언제 무엇을 친다'가 완성된다.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from fractions import Fraction
 
 from annotations import RANGE_KINDS, Annotation, collect, range_end
 from dump import bar_edges, group_chords
-from rhythm import BEND_ARROW, Event, extract_events
+from rhythm import BEND_ARROW, Event, apply_tuplets, extract_events
 from structure import FretMark, Staff, TrackStaff, detect_barlines, extract_frets
 
 
@@ -103,6 +104,8 @@ class Beat:
     is_slash: bool = False
     # 기둥 방향. 한 보표를 두 성부가 나눠 쓸 때 어느 쪽인지 가리는 근거다.
     stem_up: bool | None = None
+    # 잇단음표 비율 (셋잇단음표면 2/3 — 적힌 셋이 둘 길이만큼 간다)
+    ratio: Fraction = Fraction(1)
 
     def has(self, kind: str) -> bool:
         return any(k == kind for k, _ in self.marks)
@@ -117,7 +120,8 @@ class Beat:
     @property
     def quarters(self) -> float:
         """4분음표를 1로 봤을 때의 길이."""
-        return (4 / self.denom) * (2 - 0.5**self.dots) + self.extra_beats
+        base = (4 / self.denom) * (2 - 0.5**self.dots)
+        return base * float(self.ratio) + self.extra_beats
 
     def __str__(self) -> str:
         head = f"1/{self.denom}{'.' * self.dots}"
@@ -242,6 +246,7 @@ def merge_bar(
             extra_beats=e.extra_beats,
             is_slash=e.is_slash,
             stem_up=e.stem_up,
+            ratio=e.ratio,
         )
         if not e.is_rest:
             best, best_d = None, tolerance
@@ -324,6 +329,12 @@ def extract_bars(
     for bi in range(len(edges) - 1):
         lo, hi = edges[bi], edges[bi + 1]
         events = extract_events(track.score, glyphs, v_lines, beams, lo, hi)
+        # 잇단음표 숫자는 오선 아래에도 놓인다. TAB 윗줄을 알려줘서 그 아래
+        # 숫자(프렛)까지 잇단음표로 읽는 일이 없게 한다.
+        apply_tuplets(
+            events, glyphs, track.score, lo, hi,
+            floor_y=track.tab.top if track.tab else None,
+        )
         columns = group_chords([m for m in frets if lo < m.x < hi])
         beats, left = merge_bar(events, columns, tolerance, glyphs, lo, hi)
         orphans += left
