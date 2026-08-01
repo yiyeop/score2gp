@@ -40,12 +40,26 @@ class Event:
     dots: int
     is_rest: bool
     heads: list[Glyph]  # 화음이면 여러 개
+    # 밴딩 목표음을 병합하면서 흡수한 길이. denom/dots로는 표현 못 하는
+    # 임의의 길이(예: 1/4 + 1/8)도 정확히 더할 수 있도록 별도로 둔다.
+    extra_beats: float = 0.0
 
     @property
     def beats(self) -> float:
         """4분음표를 1로 봤을 때의 길이."""
         base = 4 / self.denom
-        return base * (2 - 0.5 ** self.dots)
+        return base * (2 - 0.5 ** self.dots) + self.extra_beats
+
+
+# 밴딩 화살표 글리프 (SMuFL PUA). 목표음이 이 글리프와 x범위가 겹치면
+# TAB에는 없는 '밴딩으로 도달한 음'이라고 본다.
+#
+# 병합은 여기서 하지 않는다. 순전히 x 순서로 '직전 이벤트에 흡수'하면,
+# 다중 화살표(온음 밴딩을 반음 두 번으로 표기하는 경우)나 목표음이 다음
+# 원음보다 TAB과 더 가까운 경우에 엉뚱한 원음에 붙는다. 대신 notes.py에서
+# TAB과 먼저 매칭한 뒤, 매칭에 실패한 것만 병합한다 — 실패한 것만 건드리므로
+# 이미 올바르게 맞은 원음을 망가뜨릴 위험이 없다.
+BEND_ARROW = 0xEB78
 
 
 def find_stem(head: Glyph, v_lines, tolerance: float = 1.2) -> Stem | None:

@@ -12,7 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from dump import bar_edges, group_chords
-from rhythm import Event, extract_events
+from rhythm import BEND_ARROW, Event, extract_events
 from structure import FretMark, Staff, TrackStaff, detect_barlines, extract_frets
 
 
@@ -40,14 +40,18 @@ class Beat:
     dots: int
     is_rest: bool
     notes: list[PlayedNote] = field(default_factory=list)
+    # 밴딩 목표음을 흡수해 붙은 여분 길이. Event.extra_beats를 그대로 옮긴 값.
+    extra_beats: float = 0.0
 
     @property
     def quarters(self) -> float:
         """4분음표를 1로 봤을 때의 길이."""
-        return (4 / self.denom) * (2 - 0.5**self.dots)
+        return (4 / self.denom) * (2 - 0.5**self.dots) + self.extra_beats
 
     def __str__(self) -> str:
         head = f"1/{self.denom}{'.' * self.dots}"
+        if self.extra_beats:
+            head += f"+{self.extra_beats:g}"
         if self.is_rest:
             return f"[{head} 쉼표]"
         body = "+".join(str(n) for n in self.notes) or "?"
@@ -73,10 +77,48 @@ def _to_notes(column: list[FretMark]) -> list[PlayedNote]:
     ]
 
 
+def _merge_bend_orphans(
+    beats: list[Beat],
+    events: list[Event],
+    glyphs,
+    lo: float,
+    hi: float,
+) -> list[Beat]:
+    """TAB과 못 맞은 음표 중 밴딩 목표음으로 보이는 것을 직전 음에 흡수시킨다.
+
+    Guitar Pro는 밴딩을 '원음 + 목표음(위로 밀린 음표머리) + full 텍스트 +
+    화살표'로 그리는데, TAB에는 원음의 프렛 하나만 적힌다. 그래서 목표음은
+    항상 TAB 매칭에 실패한다 — 매칭이 끝난 뒤 그 실패작만 후처리하면,
+    이미 TAB과 잘 맞은 원음을 건드릴 위험 없이 안전하게 정리할 수 있다.
+    (곡 전체 x 순서로 먼저 합치는 방식은 시도했으나, 온음 밴딩을 반음
+    두 번 화살표로 겹쳐 그리는 경우 등에서 엉뚱한 원음에 붙는 문제가 있었다.)
+    """
+    arrows = [(g.x0, g.x1) for g in glyphs if g.code == BEND_ARROW and lo < g.x0 < hi]
+    if not arrows:
+        return beats
+
+    tol = 2.0
+    cleaned: list[Beat] = []
+    for e, b in zip(events, beats):
+        orphan = not b.is_rest and not b.notes and e.heads
+        if orphan:
+            hx0 = min(h.x0 for h in e.heads)
+            hx1 = max(h.x1 for h in e.heads)
+            near_arrow = any(hx1 >= ax0 - tol and hx0 <= ax1 + tol for ax0, ax1 in arrows)
+            if near_arrow and cleaned and not cleaned[-1].is_rest:
+                cleaned[-1].extra_beats += b.quarters
+                continue
+        cleaned.append(b)
+    return cleaned
+
+
 def merge_bar(
     events: list[Event],
     columns: list[list[FretMark]],
     tolerance: float,
+    glyphs=None,
+    lo: float = 0.0,
+    hi: float = 0.0,
 ) -> tuple[list[Beat], int]:
     """한 마디 안에서 음길이와 프렛을 짝짓는다.
 
@@ -87,7 +129,13 @@ def merge_bar(
     beats: list[Beat] = []
 
     for e in events:
-        beat = Beat(x=e.x, denom=e.denom, dots=e.dots, is_rest=e.is_rest)
+        beat = Beat(
+            x=e.x,
+            denom=e.denom,
+            dots=e.dots,
+            is_rest=e.is_rest,
+            extra_beats=e.extra_beats,
+        )
         if not e.is_rest:
             best, best_d = None, tolerance
             for i, col in enumerate(columns):
@@ -100,6 +148,9 @@ def merge_bar(
                 used.add(best)
                 beat.notes = _to_notes(columns[best])
         beats.append(beat)
+
+    if glyphs is not None:
+        beats = _merge_bend_orphans(beats, events, glyphs, lo, hi)
 
     return beats, len(columns) - len(used)
 
@@ -134,7 +185,7 @@ def extract_bars(
         lo, hi = edges[bi], edges[bi + 1]
         events = extract_events(track.score, glyphs, v_lines, beams, lo, hi)
         columns = group_chords([m for m in frets if lo < m.x < hi])
-        beats, left = merge_bar(events, columns, tolerance)
+        beats, left = merge_bar(events, columns, tolerance, glyphs, lo, hi)
         orphans += left
         bars.append(Bar(index=bi, beats=beats, x0=lo, x1=hi))
     return bars, orphans

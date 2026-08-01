@@ -30,6 +30,9 @@ python3 -m venv .venv && .venv/bin/pip install pymupdf
 
 # 곡 전체를 조립해 요약 — 제목·템포·악기·마디 수
 .venv/bin/python dump_song.py "악보.pdf"
+
+# PDF → Guitar Pro 파일 변환 (최종 산출물)
+.venv/bin/python convert.py "악보.pdf" out.gp5
 ```
 
 ### 품질은 두 지표로 자동 측정한다
@@ -65,6 +68,8 @@ python3 -m venv .venv && .venv/bin/pip install pymupdf
   `[1/8 5현7]` 형태의 연주 가능한 데이터로 만든다
 - **곡 전체 조립** (`assemble.py`) — 시스템을 나누고 페이지를 넘어 같은 악기를
   이어 붙인다. 제목·템포·악기 이름도 읽는다
+- **`.gp5` 파일 생성** (`gpwrite.py`, `convert.py`) — 추출 결과를 실제 Guitar Pro
+  파일로 쓴다. 광인들 샘플로 PDF → .gp5 → 앱 재생까지 확인했다
 
 **검증 결과** (샘플 4종)
 
