@@ -52,6 +52,17 @@ fn find_python(root: &Path) -> Result<PathBuf, String> {
     Ok(PathBuf::from("python3"))
 }
 
+/// 변환 결과를 사용자가 고른 자리에 저장한다.
+///
+/// 변환물은 임시 폴더에 있어서 앱을 끄면 사라진다. Guitar Pro나 TuxGuitar로
+/// 이어서 쓰려면 남길 수 있어야 한다.
+#[tauri::command]
+pub fn save_score(source: String, target: String) -> Result<(), String> {
+    std::fs::copy(&source, &target)
+        .map(|_| ())
+        .map_err(|e| format!("저장하지 못했습니다: {e}"))
+}
+
 /// 변환기가 남긴 오류를 사용자에게 보여줄 문장으로 다듬는다.
 ///
 /// 변환기는 '왜 안 되는지'를 아는 실패라면 그 이유만 짧게 적고 끝낸다.

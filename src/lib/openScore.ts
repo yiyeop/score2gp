@@ -62,7 +62,7 @@ export interface ConvertResult {
  * 브라우저로 열어 개발할 때는 이 기능이 보이지 않는다.
  */
 export async function convertPdfFile(): Promise<
-  (OpenedScore & { log: string }) | null
+  (OpenedScore & { log: string; converted: string }) | null
 > {
     if (!isTauri()) {
     throw new Error("PDF 변환은 앱에서만 됩니다");
@@ -80,5 +80,33 @@ export async function convertPdfFile(): Promise<
   const result = await invoke<ConvertResult>("convert_pdf", { path });
   const data = await invoke<number[]>("read_score", { path: result.output });
   const name = path.replace(/\\/g, "/").split("/").pop() ?? path;
-  return { name, data: new Uint8Array(data), log: result.log };
+  return {
+    name,
+    data: new Uint8Array(data),
+    log: result.log,
+    converted: result.output,
+  };
+}
+
+/**
+ * 변환한 악보를 사용자가 고른 자리에 저장한다.
+ *
+ * 변환물은 임시 폴더에 있어 앱을 끄면 사라진다. Guitar Pro나 TuxGuitar로
+ * 이어서 쓰려면 남길 수 있어야 한다.
+ */
+export async function saveConverted(
+  source: string,
+  suggestedName: string,
+): Promise<boolean> {
+  const { save } = await import("@tauri-apps/plugin-dialog");
+  const { invoke } = await import("@tauri-apps/api/core");
+
+  const target = await save({
+    defaultPath: suggestedName.replace(/\.pdf$/i, "") + ".gp5",
+    filters: [{ name: "Guitar Pro", extensions: ["gp5"] }],
+  });
+  if (!target) return false;
+
+  await invoke("save_score", { source, target });
+  return true;
 }

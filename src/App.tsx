@@ -9,7 +9,7 @@ import { Timeline } from "./modes/read/Timeline";
 import { TechniqueTooltip } from "./modes/read/TechniqueTooltip";
 import { ShortcutHelp } from "./modes/read/ShortcutHelp";
 import { EditModeBar, EditModeSidebar } from "./modes/edit/EditMode";
-import { convertPdfFile, openScoreFile } from "./lib/openScore";
+import { convertPdfFile, openScoreFile, saveConverted } from "./lib/openScore";
 import { DEMO_SONG_TEX } from "./demo/demoSong";
 import "./App.css";
 
@@ -24,6 +24,9 @@ function App() {
   const [fileName, setFileName] = useState<string | null>(null);
   const [converting, setConverting] = useState(false);
   const [convertError, setConvertError] = useState<string | null>(null);
+  // 방금 변환해서 만든 파일의 경로. 임시 폴더에 있으므로 저장할 수 있게 한다.
+  const [converted, setConverted] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
 
   useShortcuts(
     buildReadShortcuts(player, () => setHelpOpen((v) => !v)),
@@ -34,12 +37,14 @@ function App() {
     const opened = await openScoreFile();
     if (opened) {
       setFileName(opened.name);
+      setConverted(null);
       player.loadBytes(opened.data);
     }
   };
 
   const handleDemo = () => {
     setFileName(null);
+    setConverted(null);
     player.loadTex(DEMO_SONG_TEX);
   };
 
@@ -47,15 +52,27 @@ function App() {
     setConvertError(null);
     setConverting(true);
     try {
-      const converted = await convertPdfFile();
-      if (converted) {
-        setFileName(converted.name);
-        player.loadBytes(converted.data);
+      const result = await convertPdfFile();
+      if (result) {
+        setFileName(result.name);
+        setConverted(result.converted);
+        setSaved(false);
+        player.loadBytes(result.data);
       }
     } catch (e) {
       setConvertError(e instanceof Error ? e.message : String(e));
     } finally {
       setConverting(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!converted || !fileName) return;
+    setConvertError(null);
+    try {
+      if (await saveConverted(converted, fileName)) setSaved(true);
+    } catch (e) {
+      setConvertError(e instanceof Error ? e.message : String(e));
     }
   };
 
@@ -87,6 +104,11 @@ function App() {
           {isTauri() && (
             <button type="button" onClick={handleConvert} disabled={converting}>
               {converting ? "변환 중…" : "PDF 변환"}
+            </button>
+          )}
+          {converted && (
+            <button type="button" onClick={handleSave} title="변환한 악보를 파일로 남깁니다">
+              {saved ? "저장됨 ✓" : "GP 파일 저장"}
             </button>
           )}
           <button type="button" className="primary" onClick={handleOpen}>
