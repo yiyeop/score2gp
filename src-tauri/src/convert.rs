@@ -52,6 +52,23 @@ fn find_python(root: &Path) -> Result<PathBuf, String> {
     Ok(PathBuf::from("python3"))
 }
 
+/// 변환기가 남긴 오류를 사용자에게 보여줄 문장으로 다듬는다.
+///
+/// 변환기는 '왜 안 되는지'를 아는 실패라면 그 이유만 짧게 적고 끝낸다.
+/// 그 경우 그대로 보여주고, 예상 못 한 오류(트레이스백)라면 마지막 줄만
+/// 추려 보여준다 — 전체를 쏟아내면 사용자가 읽을 수 없다.
+fn explain_failure(stderr: &str) -> String {
+    let text = stderr.trim();
+    if text.is_empty() {
+        return "변환에 실패했습니다 (원인을 알 수 없습니다)".into();
+    }
+    if text.contains("Traceback") {
+        let last = text.lines().last().unwrap_or(text);
+        return format!("변환 중 문제가 생겼습니다\n{last}");
+    }
+    text.to_string()
+}
+
 #[tauri::command]
 pub fn convert_pdf(path: String) -> Result<ConvertResult, String> {
     let source = PathBuf::from(&path);
@@ -83,9 +100,7 @@ pub fn convert_pdf(path: String) -> Result<ConvertResult, String> {
     let log = String::from_utf8_lossy(&result.stdout).to_string();
     if !result.status.success() {
         let err = String::from_utf8_lossy(&result.stderr);
-        let tail: Vec<&str> = err.lines().rev().take(6).collect();
-        let tail: Vec<&str> = tail.into_iter().rev().collect();
-        return Err(format!("변환에 실패했습니다\n{}", tail.join("\n")));
+        return Err(explain_failure(&err));
     }
 
     if !output.exists() {
@@ -118,5 +133,20 @@ mod tests {
         let size = std::fs::metadata(out).unwrap().len();
         assert!(size > 1000, "결과 파일이 너무 작습니다: {size} 바이트");
         assert!(result.log.contains("저장"), "로그가 이상합니다: {}", result.log);
+    }
+
+    #[test]
+    fn explains_failures_readably() {
+        // 변환기가 이유를 아는 실패는 그대로 전한다
+        let known = "악보를 찾지 못했습니다.\n스캔본은 지원하지 않습니다.";
+        assert_eq!(explain_failure(known), known);
+
+        // 예상 못 한 오류는 마지막 줄만 추린다
+        let trace = "Traceback (most recent call last):\n  File \"x.py\"\nValueError: 무언가";
+        let shown = explain_failure(trace);
+        assert!(shown.contains("ValueError: 무언가"));
+        assert!(!shown.contains("Traceback"));
+
+        assert!(!explain_failure("   ").is_empty());
     }
 }
