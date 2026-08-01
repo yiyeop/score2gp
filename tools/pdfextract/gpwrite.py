@@ -3,9 +3,12 @@
 추출 단계의 결과(`assemble.Song`)를 PyGuitarPro의 모델로 옮겨 `.gp5`로 저장한다.
 이 파일이 나와야 실제로 앱에서 열어 소리로 검증할 수 있다.
 
+옮기는 것
+- 음정·리듬, 조율, 주법(팜뮤트·레트링·해머온·슬라이드), 톤 지시
+
 한계
-- 밴딩·슬라이드 같은 주법은 아직 넣지 않는다. 음정과 리듬만 옮긴다.
-- 조율은 표준 튜닝으로 고정한다(PDF에서 조율을 아직 안 읽는다).
+- 밴딩의 음정 변화량은 아직 안 넣는다. 'full' 같은 표기는 글로만 남긴다.
+- 슬라이드는 도착 프렛을 모르므로 '이어지는 슬라이드'로만 표시한다.
 """
 
 from __future__ import annotations
@@ -14,11 +17,10 @@ from fractions import Fraction
 
 import guitarpro as gp
 
+from annotations import TONE_PROGRAMS
 from assemble import Part, Song
 from notes import Beat
-
-# 표준 튜닝 (1번 현 = 가장 높은 음). PyGuitarPro의 strings는 이 순서를 쓴다.
-STANDARD_TUNING = [64, 59, 55, 50, 45, 40]  # E4 B3 G3 D3 A2 E2
+from tuning import STANDARD_TUNING, parse_tuning
 
 # 4분음표를 1로 봤을 때의 길이 → (Duration.value, isDotted)
 # Duration.value는 온음표를 1로 하는 분모다. 4 = 4분음표.
@@ -58,6 +60,35 @@ def _string_to_gp(string: int) -> int:
     return string
 
 
+def _apply_note_effects(note: gp.models.Note, beat: Beat) -> None:
+    """주법 표시를 음표 이펙트로 옮긴다."""
+    fx = note.effect
+    if beat.has("palm_mute"):
+        fx.palmMute = True
+    if beat.has("let_ring"):
+        fx.letRing = True
+    if beat.has("hammer"):
+        fx.hammer = True
+    if beat.has("slide"):
+        # 도착 프렛을 아직 모르므로 '이어지는 슬라이드'로 표시한다.
+        fx.slides = [gp.models.SlideType.legatoSlideTo]
+
+
+def _apply_tone(gbeat: gp.models.Beat, tone: str) -> None:
+    """톤 지시를 음색 변경으로 옮긴다.
+
+    Delay·Chorus 같은 이펙터는 GP5의 믹스 테이블에 자리가 없거나 강도를
+    알 수 없어서, 소리를 바꾸는 대신 글로 남긴다. 최소한 악보에는 원본처럼
+    보이고, 나중에 더 정확히 옮길 때 근거로도 쓸 수 있다.
+    """
+    program = TONE_PROGRAMS.get(tone.strip().lower())
+    if program is None:
+        return
+    change = gp.models.MixTableChange()
+    change.instrument = gp.models.MixTableItem(value=program)
+    gbeat.effect.mixTableChange = change
+
+
 def _fill_measure(measure: gp.models.Measure, beats: list[Beat]) -> None:
     voice = measure.voices[0]
     voice.beats.clear()
@@ -65,6 +96,16 @@ def _fill_measure(measure: gp.models.Measure, beats: list[Beat]) -> None:
     for b in beats:
         gbeat = gp.models.Beat(voice=voice)
         gbeat.duration = quarters_to_duration(b.quarters)
+
+        # 악보에 적힌 지시는 글로도 남긴다. 원본과 대조하기 쉽고,
+        # GP 이펙트로 옮기지 못한 것(Delay 등)도 정보가 사라지지 않는다.
+        labels = [t for k, t in b.marks if k in ("tone", "bend", "chord")]
+        if labels:
+            gbeat.text = " ".join(dict.fromkeys(labels))
+
+        tone = b.tone
+        if tone:
+            _apply_tone(gbeat, tone)
 
         if b.is_rest or not b.notes:
             # 프렛을 못 읽은 음은 쉼표로 둔다. 소리를 지어내는 것보다
@@ -81,6 +122,7 @@ def _fill_measure(measure: gp.models.Measure, beats: list[Beat]) -> None:
                 else:
                     note.value = n.fret
                     note.type = gp.models.NoteType.normal
+                _apply_note_effects(note, b)
                 gbeat.notes.append(note)
 
         voice.beats.append(gbeat)
@@ -121,9 +163,10 @@ def build_gp_song(song: Song, only_tab: bool = True) -> gp.models.Song:
         track.channel.channel = min(i * 2, 15)
         track.channel.effectChannel = min(i * 2 + 1, 15)
 
+        tuning = song.tuning or STANDARD_TUNING
         track.strings = [
             gp.models.GuitarString(number=s + 1, value=v)
-            for s, v in enumerate(STANDARD_TUNING)
+            for s, v in enumerate(tuning)
         ]
 
         track.measures.clear()

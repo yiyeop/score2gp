@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 import fitz
 
 from notes import Bar, extract_bars
+from tuning import parse_tuning
 from structure import (
     Glyph,
     TrackStaff,
@@ -38,6 +39,8 @@ class Song:
     title: str | None
     tempo: int | None
     parts: list[Part]
+    # 1번 현부터의 MIDI 음높이. 표기를 못 읽으면 None(표준 튜닝).
+    tuning: list[int] | None = None
 
     @property
     def bar_count(self) -> int:
@@ -221,6 +224,7 @@ def _track_names(
 def assemble(path: str) -> Song:
     doc = fitz.open(path)
     title = tempo = None
+    tuning = None
     parts: dict[tuple[str, int], Part] = {}
 
     for pno in range(len(doc)):
@@ -232,6 +236,7 @@ def assemble(path: str) -> Song:
         if pno == 0:
             title, tempo = read_metadata(page, glyphs)
             names = _track_names(glyphs, systems)
+            tuning = parse_tuning(glyphs)
 
         for system in systems:
             shared = consensus_barlines(system, v_lines)
@@ -258,4 +263,4 @@ def assemble(path: str) -> Song:
                 part.bars.extend(bars)
 
     ordered = [parts[k] for k in sorted(parts, key=lambda k: (k[0] != "tab", k[1]))]
-    return Song(title=title, tempo=tempo, parts=ordered)
+    return Song(title=title, tempo=tempo, parts=ordered, tuning=tuning)

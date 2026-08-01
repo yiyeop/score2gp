@@ -11,9 +11,44 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from annotations import Annotation, collect
 from dump import bar_edges, group_chords
 from rhythm import BEND_ARROW, Event, extract_events
 from structure import FretMark, Staff, TrackStaff, detect_barlines, extract_frets
+
+
+def _page_texts(glyphs):
+    """가까이 붙은 글자들을 한 덩어리 텍스트로 모은다."""
+    items = sorted(
+        (g for g in glyphs if not g.is_music and g.char.strip()),
+        key=lambda g: (round(g.y, 0), g.x0),
+    )
+    out: list[list] = []
+    for g in items:
+        if out and abs(out[-1][1] - g.y) < 1.5 and g.x0 - out[-1][3] < 3.0:
+            out[-1][2] += g.char
+            out[-1][3] = g.x1
+        else:
+            out.append([g.x0, g.y, g.char, g.x1])
+    return [(o[0], o[1], o[2].strip()) for o in out if o[2].strip()]
+
+
+def attach_marks(
+    beats: list[Beat], marks: list[Annotation], gap: float
+) -> None:
+    """주석을 가장 가까운 소리에 붙인다.
+
+    주석은 해당 음표의 바로 위나 아래에 그려지므로 x가 가장 가까운 소리를
+    고른다. 톤 지시(Distortion 등)는 그 자리부터 바뀌는 것이라 조금 더
+    넉넉한 범위를 허용한다.
+    """
+    if not beats or not marks:
+        return
+    for a in marks:
+        limit = gap * 6 if a.kind == "tone" else gap * 2.5
+        best = min(beats, key=lambda b: abs(b.x - a.x))
+        if abs(best.x - a.x) <= limit:
+            best.marks.append((a.kind, a.text))
 
 
 @dataclass
@@ -42,6 +77,18 @@ class Beat:
     notes: list[PlayedNote] = field(default_factory=list)
     # 밴딩 목표음을 흡수해 붙은 여분 길이. Event.extra_beats를 그대로 옮긴 값.
     extra_beats: float = 0.0
+    # 이 소리에 걸린 주법·톤 지시 (kind, text). 예: ("slide", "sl.")
+    marks: list[tuple[str, str]] = field(default_factory=list)
+
+    def has(self, kind: str) -> bool:
+        return any(k == kind for k, _ in self.marks)
+
+    @property
+    def tone(self) -> str | None:
+        for k, t in self.marks:
+            if k == "tone":
+                return t
+        return None
 
     @property
     def quarters(self) -> float:
@@ -179,6 +226,8 @@ def extract_bars(
     ref: Staff = track.tab or track.score
     tolerance = ref.gap * 1.2
 
+    texts = _page_texts(glyphs)
+
     bars: list[Bar] = []
     orphans = 0
     for bi in range(len(edges) - 1):
@@ -187,5 +236,6 @@ def extract_bars(
         columns = group_chords([m for m in frets if lo < m.x < hi])
         beats, left = merge_bar(events, columns, tolerance, glyphs, lo, hi)
         orphans += left
+        attach_marks(beats, collect(glyphs, texts, ref, lo, hi), ref.gap)
         bars.append(Bar(index=bi, beats=beats, x0=lo, x1=hi))
     return bars, orphans
