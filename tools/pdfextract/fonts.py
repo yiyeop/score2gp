@@ -21,6 +21,9 @@ from dataclasses import dataclass, field
 class FontProfile:
     name: str
     heads_black: frozenset[int] = field(default_factory=frozenset)
+    # 리듬 슬래시(/) — '직전 화음을 그대로 한 번 더'라는 표기다.
+    # 음표처럼 박자를 차지하지만 TAB에 프렛이 적히지 않는다.
+    slashes: frozenset[int] = field(default_factory=frozenset)
     heads_half: frozenset[int] = field(default_factory=frozenset)
     heads_whole: frozenset[int] = field(default_factory=frozenset)
     heads_dead: frozenset[int] = field(default_factory=frozenset)
@@ -30,7 +33,13 @@ class FontProfile:
 
     @property
     def all_heads(self) -> frozenset[int]:
-        return self.heads_black | self.heads_half | self.heads_whole | self.heads_dead
+        return (
+            self.heads_black
+            | self.heads_half
+            | self.heads_whole
+            | self.heads_dead
+            | self.slashes
+        )
 
 
 # ── SMuFL 표준 (Bravura 계열) ────────────────────────────────
@@ -66,6 +75,7 @@ SMUFL = FontProfile(
 MAESTRO = FontProfile(
     name="maestro",
     heads_black=frozenset({0x0153}),
+    slashes=frozenset({0xF0F3}),
     heads_half=frozenset({0x02D9}),
     heads_whole=frozenset({0x0077}),
     heads_dead=frozenset({0xF0C0}),
@@ -76,6 +86,7 @@ MAESTRO = FontProfile(
         0x0152: 4,   # 4분쉼표
         0x2030: 8,   # 8분쉼표
     },
+    flags={0x004A: 8, 0x006A: 8},
 )
 
 _PROFILES = (

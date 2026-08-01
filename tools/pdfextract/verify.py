@@ -6,6 +6,9 @@
 2. **프렛 결합률** — 쉼표가 아닌 소리에 짚는 자리가 붙었는지.
    오선보 음표는 읽었는데 TAB을 못 붙였거나 그 반대면 여기서 드러난다.
 
+실제 변환과 같은 경로(`assemble`)를 쓴다. 조립 단계에서만 하는 처리
+(리듬 슬래시 화음 이어받기 등)까지 함께 재기 위해서다.
+
     python verify.py <악보.pdf> [기대박자(기본 4)]
 """
 
@@ -14,10 +17,7 @@ from __future__ import annotations
 import sys
 from fractions import Fraction
 
-import fitz
-
-from notes import extract_bars
-from structure import detect_staves, pair_tracks, read_page
+from assemble import assemble
 
 
 def main() -> None:
@@ -27,51 +27,41 @@ def main() -> None:
     path = sys.argv[1]
     expected = Fraction(sys.argv[2]) if len(sys.argv) > 2 else Fraction(4)
 
-    doc = fitz.open(path)
+    song = assemble(path)
+
     bars_total = bars_ok = 0
     sounds = sounds_with_frets = 0
-    orphans_total = 0
     problems: list[str] = []
 
-    for pno in range(len(doc)):
-        page = doc[pno]
-        h_seg, v_lines, beams, glyphs = read_page(page)
-        tracks = pair_tracks(detect_staves(h_seg, page.rect.width))
-
-        for ti, t in enumerate(tracks):
-            if not t.score:
+    for part in song.parts:
+        for bar in part.bars:
+            if not bar.beats:
                 continue
-            bars, orphans = extract_bars(t, glyphs, v_lines, beams)
-            orphans_total += orphans
-
-            for bar in bars:
-                if not bar.beats:
-                    continue
-                bars_total += 1
-                total = sum(
-                    Fraction(b.quarters).limit_denominator(64) for b in bar.beats
+            bars_total += 1
+            total = sum(Fraction(b.quarters).limit_denominator(64) for b in bar.beats)
+            if total == expected:
+                bars_ok += 1
+            else:
+                detail = " ".join(str(b) for b in bar.beats)
+                problems.append(
+                    f"  파트{part.index} 마디{bar.index + 1}: "
+                    f"{float(total):.2f}박  {detail[:88]}"
                 )
-                if total == expected:
-                    bars_ok += 1
-                else:
-                    detail = " ".join(str(b) for b in bar.beats)
-                    problems.append(
-                        f"  p{pno + 1} 슬롯{ti} 마디{bar.index + 1}: "
-                        f"{float(total):.2f}박  {detail[:88]}"
-                    )
-                for b in bar.beats:
-                    if b.is_rest:
-                        continue
-                    sounds += 1
-                    if b.notes:
-                        sounds_with_frets += 1
+            for b in bar.beats:
+                if b.is_rest:
+                    continue
+                sounds += 1
+                if b.notes:
+                    sounds_with_frets += 1
 
     def pct(a: int, b: int) -> str:
         return f"{a / b * 100:5.1f}%" if b else "  n/a"
 
     print(f"마디 길이 일치 : {bars_ok:5}/{bars_total:<5} {pct(bars_ok, bars_total)}")
-    print(f"프렛 결합률    : {sounds_with_frets:5}/{sounds:<5} {pct(sounds_with_frets, sounds)}")
-    print(f"짝 못 찾은 TAB : {orphans_total}개")
+    print(
+        f"프렛 결합률    : {sounds_with_frets:5}/{sounds:<5} "
+        f"{pct(sounds_with_frets, sounds)}"
+    )
 
     if problems:
         print(f"\n길이가 어긋난 마디 {len(problems)}개 (앞 15개):")

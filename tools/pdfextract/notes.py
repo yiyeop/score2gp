@@ -99,6 +99,8 @@ class Beat:
     extra_beats: float = 0.0
     # 이 소리에 걸린 주법·톤 지시 (kind, text). 예: ("slide", "sl.")
     marks: list[tuple[str, str]] = field(default_factory=list)
+    # 리듬 슬래시로 그려진 박 (직전 화음 반복)
+    is_slash: bool = False
 
     def has(self, kind: str) -> bool:
         return any(k == kind for k, _ in self.marks)
@@ -202,6 +204,7 @@ def merge_bar(
             dots=e.dots,
             is_rest=e.is_rest,
             extra_beats=e.extra_beats,
+            is_slash=e.is_slash,
         )
         if not e.is_rest:
             best, best_d = None, tolerance
@@ -220,6 +223,24 @@ def merge_bar(
         beats = _merge_bend_orphans(beats, events, glyphs, lo, hi)
 
     return beats, len(columns) - len(used)
+
+
+def carry_slash_chords(bars: list[Bar]) -> None:
+    """리듬 슬래시(/)에 직전 화음을 채워 넣는다.
+
+    슬래시는 '직전 화음을 그대로 한 번 더'라는 표기라 TAB에 프렛이 적히지
+    않는다. 그대로 두면 소리가 나지 않으므로, 마디를 넘어가며 마지막으로
+    실제 프렛이 있었던 화음을 이어받는다.
+    """
+    last: list[PlayedNote] = []
+    for bar in bars:
+        for b in bar.beats:
+            if b.is_rest:
+                continue
+            if b.notes:
+                last = b.notes
+            elif b.is_slash and last:
+                b.notes = list(last)
 
 
 def extract_bars(

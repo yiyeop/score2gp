@@ -155,6 +155,15 @@ def _fill_measure(
     voice = measure.voices[0]
     voice.beats.clear()
 
+    if not beats:
+        # 쉬는 악기의 보표를 빼고 찍는 악보가 있어서 파트마다 마디 수가 다르다.
+        # 빈 마디를 그대로 두면 재생기가 읽다가 죽으므로 온쉼표로 채운다.
+        rest = gp.models.Beat(voice=voice)
+        rest.duration = gp.models.Duration(value=1)
+        rest.status = gp.models.BeatStatus.rest
+        voice.beats.append(rest)
+        return
+
     for i, b in enumerate(beats):
         following = beats[i + 1] if i + 1 < len(beats) else next_bar_first
         gbeat = gp.models.Beat(voice=voice)

@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 
 import fitz
 
-from notes import Bar, extract_bars
+from notes import Bar, carry_slash_chords, extract_bars
 from tuning import parse_tuning
 from structure import (
     Glyph,
@@ -287,6 +287,11 @@ def assemble(path: str) -> Song:
                     zone=zones.get(id(track)),
                 )
                 part.bars.extend(bars)
+
+    # 리듬 슬래시는 직전 화음을 반복하라는 표기다. 시스템·페이지를 넘어
+    # 이어지므로 곡 전체를 조립한 뒤에 채운다.
+    for part in parts.values():
+        carry_slash_chords(part.bars)
 
     ordered = [parts[k] for k in sorted(parts, key=lambda k: (k[0] != "tab", k[1]))]
     return Song(title=title, tempo=tempo, parts=ordered, tuning=tuning)

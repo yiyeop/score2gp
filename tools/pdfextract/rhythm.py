@@ -40,6 +40,8 @@ class Event:
     dots: int
     is_rest: bool
     heads: list[Glyph]  # 화음이면 여러 개
+    # 리듬 슬래시(/)로 그려진 박. 직전 화음을 그대로 다시 친다는 뜻이다.
+    is_slash: bool = False
     # 밴딩 목표음을 병합하면서 흡수한 길이. denom/dots로는 표현 못 하는
     # 임의의 길이(예: 1/4 + 1/8)도 정확히 더할 수 있도록 별도로 둔다.
     extra_beats: float = 0.0
@@ -199,6 +201,7 @@ def extract_events(
                     denom = 4 * (2 ** n)
                 else:
                     denom = find_flag_denom(stem, local) or 4
+        prof_slashes = prof.slashes if prof else frozenset()
         events.append(
             Event(
                 x=head.x0,
@@ -206,6 +209,7 @@ def extract_events(
                 dots=count_dots(col, local, staff.gap),
                 is_rest=False,
                 heads=col,
+                is_slash=all(h.code in prof_slashes for h in col),
             )
         )
 
