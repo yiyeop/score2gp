@@ -4,11 +4,13 @@
 이 파일이 나와야 실제로 앱에서 열어 소리로 검증할 수 있다.
 
 옮기는 것
-- 음정·리듬, 조율, 주법(팜뮤트·레트링·해머온·슬라이드), 톤 지시
+- 음정·리듬, 조율
+- 주법: 팜뮤트·레트링·해머온·슬라이드·밴딩
+- 톤 지시: 음색에 대응하는 것은 악기 변경으로, 나머지는 글로
 
 한계
-- 밴딩의 음정 변화량은 아직 안 넣는다. 'full' 같은 표기는 글로만 남긴다.
-- 슬라이드는 도착 프렛을 모르므로 '이어지는 슬라이드'로만 표시한다.
+- 밴딩의 시간 곡선은 PDF에 없어서 '올려서 유지'하는 표준 모양으로 만든다.
+- 잇단음표(셋잇단 등) 미지원.
 """
 
 from __future__ import annotations
@@ -60,7 +62,42 @@ def _string_to_gp(string: int) -> int:
     return string
 
 
-def _apply_note_effects(note: gp.models.Note, beat: Beat) -> None:
+# 밴딩 표기 → 반음 수. 'full'은 온음(2반음)이 관례다.
+_BEND_AMOUNTS = {
+    "full": 2.0,
+    "1": 2.0,
+    "1/2": 1.0,
+    "1/4": 0.5,
+    "1 1/2": 3.0,
+    "2": 4.0,
+}
+
+
+def bend_semitones(text: str) -> float | None:
+    return _BEND_AMOUNTS.get(text.strip().lower())
+
+
+def _make_bend(semitones: float) -> gp.models.BendEffect:
+    """가장 흔한 모양의 밴딩을 만든다 — 쳐서 올린 뒤 유지.
+
+    PDF에는 밴딩의 시간 곡선이 없고 도달 음정만 적혀 있어서, 표준적인
+    '중간에 올려서 끝까지 유지' 형태로 만든다.
+    """
+    value = int(round(semitones * gp.models.BendEffect.semitoneLength))
+    return gp.models.BendEffect(
+        type=gp.models.BendType.bend,
+        value=value,
+        points=[
+            gp.models.BendPoint(position=0, value=0),
+            gp.models.BendPoint(position=6, value=value),
+            gp.models.BendPoint(position=12, value=value),
+        ],
+    )
+
+
+def _apply_note_effects(
+    note: gp.models.Note, beat: Beat, next_beat: Beat | None
+) -> None:
     """주법 표시를 음표 이펙트로 옮긴다."""
     fx = note.effect
     if beat.has("palm_mute"):
@@ -69,9 +106,25 @@ def _apply_note_effects(note: gp.models.Note, beat: Beat) -> None:
         fx.letRing = True
     if beat.has("hammer"):
         fx.hammer = True
+
+    # 데드 노트는 음정이 없어서 밴딩·슬라이드가 성립하지 않는다.
+    if note.type is not gp.models.NoteType.dead:
+        for kind, text in beat.marks:
+            if kind == "bend":
+                amount = bend_semitones(text)
+                if amount:
+                    fx.bend = _make_bend(amount)
+                break
+
     if beat.has("slide"):
-        # 도착 프렛을 아직 모르므로 '이어지는 슬라이드'로 표시한다.
-        fx.slides = [gp.models.SlideType.legatoSlideTo]
+        # GP는 슬라이드의 도착 프렛을 따로 저장하지 않는다. 같은 현의 다음
+        # 음이 곧 도착점이라, 이어지는 음이 없는 현에 걸면 '갈 곳 없는
+        # 슬라이드'가 된다. 그래서 다음 음이 같은 현에 있을 때만 건다.
+        lands = next_beat is not None and any(
+            n.string == note.string and not n.dead for n in next_beat.notes
+        )
+        if lands:
+            fx.slides = [gp.models.SlideType.shiftSlideTo]
 
 
 def _apply_tone(gbeat: gp.models.Beat, tone: str) -> None:
@@ -89,11 +142,21 @@ def _apply_tone(gbeat: gp.models.Beat, tone: str) -> None:
     gbeat.effect.mixTableChange = change
 
 
-def _fill_measure(measure: gp.models.Measure, beats: list[Beat]) -> None:
+def _fill_measure(
+    measure: gp.models.Measure,
+    beats: list[Beat],
+    next_bar_first: Beat | None = None,
+) -> None:
+    """마디 하나를 채운다.
+
+    슬라이드는 다음 음이 어디에 떨어지는지 알아야 해서, 마디 끝 음을 위해
+    다음 마디의 첫 음까지 받는다.
+    """
     voice = measure.voices[0]
     voice.beats.clear()
 
-    for b in beats:
+    for i, b in enumerate(beats):
+        following = beats[i + 1] if i + 1 < len(beats) else next_bar_first
         gbeat = gp.models.Beat(voice=voice)
         gbeat.duration = quarters_to_duration(b.quarters)
 
@@ -122,7 +185,7 @@ def _fill_measure(measure: gp.models.Measure, beats: list[Beat]) -> None:
                 else:
                     note.value = n.fret
                     note.type = gp.models.NoteType.normal
-                _apply_note_effects(note, b)
+                _apply_note_effects(note, b, following)
                 gbeat.notes.append(note)
 
         voice.beats.append(gbeat)
@@ -175,7 +238,8 @@ def build_gp_song(song: Song, only_tab: bool = True) -> gp.models.Song:
             measure.track = track
             measure.header = out.measureHeaders[bi]
             beats = part.bars[bi].beats if bi < len(part.bars) else []
-            _fill_measure(measure, beats)
+            nxt = part.bars[bi + 1].beats if bi + 1 < len(part.bars) else []
+            _fill_measure(measure, beats, nxt[0] if nxt else None)
             track.measures.append(measure)
 
         out.tracks.append(track)

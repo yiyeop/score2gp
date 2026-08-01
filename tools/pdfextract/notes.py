@@ -47,7 +47,19 @@ def attach_marks(
     if not beats:
         return
 
+    playable = [b for b in beats if b.notes and not all(n.dead for n in b.notes)]
+
     for a in marks:
+        if a.kind == "bend":
+            # 밴딩 표기('full' 등)는 목표음 위에 적히는데 그 목표음은 이미
+            # 시작음에 병합돼 사라졌다. 그래서 가장 가까운 음을 고르면 뒤쪽
+            # 엉뚱한 음(데드 노트 등)에 붙는다. 표기보다 앞에 있는, 실제로
+            # 칠 수 있는 마지막 음이 밴딩의 시작음이다.
+            before = [b for b in playable if b.x <= a.x + gap]
+            if before:
+                before[-1].marks.append((a.kind, a.text))
+            continue
+
         limit = gap * 6 if a.kind == "tone" else gap * 2.5
         best = min(beats, key=lambda b: abs(b.x - a.x))
         if abs(best.x - a.x) <= limit:
