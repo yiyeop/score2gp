@@ -249,6 +249,11 @@ def detect_staves(h_segments, page_width: float) -> list[Staff]:
     return staves
 
 
+# 기타에 실제로 있는 가장 높은 프렛. 24프렛이 가장 많고, 그보다 많은 악기는
+# 사실상 없다. 이보다 큰 값이 나왔다면 읽기가 틀린 것이다.
+FRET_MAX = 24
+
+
 @dataclass
 class FretMark:
     """TAB 위의 프렛 표시 하나. 두 자리 수(10~24)도 하나로 묶인다."""
@@ -268,6 +273,11 @@ class FretMark:
         return self.text.upper() == "X"
 
 
+# 밴딩 화살표 글리프. 화살표 끝에 적힌 숫자는 '올려서 닿을 음'이지
+# 따로 치는 음이 아니다.
+BEND_ARROW = 0xEB78
+
+
 def extract_frets(tab: Staff, glyphs: list[Glyph]) -> list[FretMark]:
     """TAB 보표 위의 숫자를 읽어 (현, 프렛)으로 만든다.
 
@@ -275,8 +285,21 @@ def extract_frets(tab: Staff, glyphs: list[Glyph]) -> list[FretMark]:
     같은 줄에서 가로로 맞붙은 글자는 한 숫자로 합친다.
     글자는 줄 위에 세로 중앙이 오도록 그려지므로 baseline이 아니라
     글자 상자의 중앙 y로 현을 판정한다.
+
+    밴딩 목표음은 세지 않는다. 목표를 숫자로 적는 악보가 있는데(원래 음
+    한 줄 위에 화살표로 이어 그린다), 그걸 치는 음으로 세면 마디에 있지도
+    않은 음이 들어가고 박자도 넘친다.
     """
     span = tab.gap * 0.5
+    arrows = [
+        (g.x0, g.x1)
+        for g in glyphs
+        if g.code == BEND_ARROW and tab.top - tab.gap * 4 < g.y < tab.bottom + span
+    ]
+
+    def is_bend_target(mark: "FretMark") -> bool:
+        return any(a0 <= mark.right and mark.x <= a1 for a0, a1 in arrows)
+
     cand = []
     for g in glyphs:
         if g.is_music:
@@ -297,9 +320,14 @@ def extract_frets(tab: Staff, glyphs: list[Glyph]) -> list[FretMark]:
             and abs(prev.y - cy) < 1.0
             and t.isdigit()
             and prev.text.isdigit()
-            # 프렛은 최대 두 자리(0~24)다. 이 제약이 없으면 빠른 패시지에서
+            # 프렛은 최대 두 자리다. 이 제약이 없으면 빠른 패시지에서
             # 이웃한 프렛까지 이어붙어 '121412' 같은 값이 나온다.
             and len(prev.text) < 2
+            # 합쳐서 나올 수 없는 프렛이 되면 원래 두 음이었다는 뜻이다.
+            # 빠른 패시지에서는 음 사이 간격이 두 자리 수 내부 간격만큼
+            # 좁아져서 자리 배치만으로는 갈리지 않는다. 실제로 '9 11 9'가
+            # '91 1 9'로 읽혔다 — 91프렛짜리 기타는 없으므로 여기서 걸러진다.
+            and int(prev.text + t) <= FRET_MAX
             # 두 자리 수의 글자는 살짝 겹쳐 그려지기도 해서 음수 간격을 허용한다
             and -1.5 <= g.x0 - prev.right <= (g.x1 - g.x0) * 0.5
         ):
@@ -310,6 +338,10 @@ def extract_frets(tab: Staff, glyphs: list[Glyph]) -> list[FretMark]:
         if s is None:
             continue
         marks.append(FretMark(text=t, string=s, x=g.x0, right=g.x1, y=cy))
+
+    # 두 자리 수를 합친 뒤에 거른다. 합치기 전에 거르면 화살표에 걸친 글자만
+    # 빠져서 '14'가 '4'로 남는다.
+    marks = [m for m in marks if not is_bend_target(m)]
     marks.sort(key=lambda m: m.x)
     return marks
 
