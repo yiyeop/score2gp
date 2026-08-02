@@ -67,6 +67,42 @@ class MergeDigits(unittest.TestCase):
         self.assertEqual(read([digit("X", 100.0, 5)]), [("X", 5)])
 
 
+class BassTab(unittest.TestCase):
+    """4줄 TAB(베이스). 6줄 TAB의 아래 네 줄과 모양이 같아 헷갈리기 쉽다."""
+
+    @staticmethod
+    def staff(lines: int, top: float, gap: float = 5.86) -> Staff:
+        return Staff(
+            kind="tab",
+            lines=[top + gap * i for i in range(lines)],
+            x0=28.0,
+            x1=567.0,
+        )
+
+    def rows(self, staves):
+        """보표 줄을 가로선 묶음으로 바꾼다 (detect_staves 입력 모양)."""
+        import collections
+        h = collections.defaultdict(list)
+        for st in staves:
+            for y in st.lines:
+                h[round(y, 1)].append((st.x0, st.x1))
+        return h
+
+    def test_finds_a_four_line_tab(self):
+        from structure import detect_staves
+        # 오선 5줄 + TAB 4줄 (실측 아지랑이 베이스 배치)
+        score = Staff(kind="score", lines=[100 + 3.92 * i for i in range(5)], x0=28.0, x1=567.0)
+        tab = self.staff(4, 140.0)
+        found = detect_staves(self.rows([score, tab]), 595.0)
+        self.assertEqual([len(s.lines) for s in found], [5, 4])
+
+    def test_does_not_split_a_six_line_tab(self):
+        from structure import detect_staves
+        # 6줄 TAB 하나만 있을 때 아래 네 줄을 베이스로 잘라내면 안 된다
+        found = detect_staves(self.rows([self.staff(6, 140.0)]), 595.0)
+        self.assertEqual([len(s.lines) for s in found], [6])
+
+
 class BendTargets(unittest.TestCase):
     """밴딩 목표음은 치는 음이 아니다."""
 

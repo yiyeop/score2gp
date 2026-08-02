@@ -32,6 +32,8 @@ class Part:
     name: str | None
     has_tab: bool
     bars: list[Bar] = field(default_factory=list)
+    # TAB 줄 수 = 현 수. 4줄이면 베이스다.
+    strings: int = 6
 
 
 @dataclass
@@ -335,6 +337,8 @@ def assemble(path: str) -> Song:
                     parts[key] = part
                 if part.name is None and pno == 0:
                     part.name = names.get(round(track.top))
+                if track.tab:
+                    part.strings = len(track.tab.lines)
                 bars, _orphans = extract_bars(
                     track,
                     glyphs,

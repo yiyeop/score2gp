@@ -200,11 +200,26 @@ def detect_staves(h_segments, page_width: float) -> list[Staff]:
             candidates.append((y, min(xs), max(xs)))
     candidates.sort()
 
+    # 문턱을 못 넘은 줄도 자리만은 기억해 둔다. 프렛 숫자가 빽빽한 TAB은
+    # 줄이 숫자마다 끊겨(실측 63토막, 38%) 후보에서 빠지는데, 그 자리에
+    # 뭔가 있었다는 사실은 4줄/6줄을 가릴 때 필요하다.
+    faint = sorted(
+        y for y, segs in h_segments.items()
+        if page_width * 0.15 < _merge_coverage(segs) <= page_width * 0.4
+    )
+
+    def has_line_at(y: float, tol: float = 1.2) -> bool:
+        return any(abs(f - y) <= tol for f in faint) or any(
+            abs(c[0] - y) <= tol for c in candidates
+        )
+
     # 가능한 창을 모두 만들어 '간격이 얼마나 고른지'로 점수를 매긴다.
     # 보표 바로 위/아래에 다른 선(P.M. 괄호 등)이 붙어 있으면 한 줄 밀린 창도
     # 후보가 되는데, 진짜 보표는 간격 편차가 거의 0이라 점수로 걸러진다.
+    # 줄 수가 많은 것부터 본다. 4줄 TAB(베이스)은 5줄 오선과 6줄 TAB 안에도
+    # 들어 있으므로, 그 둘을 먼저 확정한 뒤에 남은 줄에서만 찾아야 한다.
     windows = []
-    for count, kind in ((6, "tab"), (5, "score")):
+    for count, kind in ((6, "tab"), (5, "score"), (4, "tab")):
         for i in range(len(candidates) - count + 1):
             run = candidates[i : i + count]
             gaps = [run[k + 1][0] - run[k][0] for k in range(count - 1)]
@@ -223,6 +238,13 @@ def detect_staves(h_segments, page_width: float) -> list[Staff]:
             rights = [r[2] for r in run]
             slack = max(max(lefts) - min(lefts), max(rights) - min(rights))
             if slack > max(6.0, (max(rights) - min(lefts)) * 0.05):
+                continue
+            # 4줄 TAB(베이스)은 6줄 TAB의 아래 네 줄과 모양이 같다. 위쪽에
+            # 같은 간격으로 줄이 더 있으면 베이스가 아니라 잘린 기타 TAB이다.
+            # 이걸 안 보면 기타를 베이스로 읽어 조율까지 틀리게 된다.
+            if count == 4 and (
+                has_line_at(run[0][0] - mean) or has_line_at(run[0][0] - mean * 2)
+            ):
                 continue
             windows.append((dev, -count, i, count, kind, run))
 

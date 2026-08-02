@@ -22,7 +22,7 @@ import guitarpro as gp
 from annotations import TONE_PROGRAMS
 from assemble import Part, Song
 from notes import Beat
-from tuning import STANDARD_TUNING, parse_tuning
+from tuning import parse_tuning, standard_tuning
 
 # 4분음표를 1로 봤을 때의 길이 → (Duration.value, isDotted)
 # Duration.value는 온음표를 1로 하는 분모다. 4 = 4분음표.
@@ -275,7 +275,13 @@ def build_gp_song(song: Song, only_tab: bool = True) -> gp.models.Song:
         track.channel.channel = min(i * 2, 15)
         track.channel.effectChannel = min(i * 2 + 1, 15)
 
-        tuning = song.tuning or STANDARD_TUNING
+        # 곡 전체에 적힌 조율 표기(① = E♭ 등)는 그 표기가 나온 현 수에만
+        # 맞는다. 4현 베이스에 6현 기타 조율을 씌우면 소리가 엉뚱해진다.
+        default = standard_tuning(part.strings)
+        tuning = song.tuning if song.tuning and len(song.tuning) == part.strings else default
+        if part.strings == 4:
+            # 베이스는 기본 악기도 기타와 다르다 (GM 34 = 핑거 베이스)
+            track.channel.instrument = 33
         track.strings = [
             gp.models.GuitarString(number=s + 1, value=v)
             for s, v in enumerate(tuning)

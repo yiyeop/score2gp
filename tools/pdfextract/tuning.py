@@ -25,6 +25,15 @@ FLAT, NATURAL, SHARP = 0xE260, 0xE261, 0xE262
 
 # 표준 튜닝 (1번 현 → 6번 현)
 STANDARD_TUNING = [64, 59, 55, 50, 45, 40]
+# 4현 베이스 표준 튜닝 (G D A E). 기타보다 한 옥타브 아래다.
+BASS_TUNING = [43, 38, 33, 28]
+
+
+def standard_tuning(strings: int) -> list[int]:
+    """현 수에 맞는 표준 튜닝. 아는 것이 없으면 기타 것을 잘라 쓴다."""
+    if strings == 4:
+        return BASS_TUNING
+    return STANDARD_TUNING[:strings] if strings < 6 else STANDARD_TUNING
 
 _PITCH_CLASS = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}
 
