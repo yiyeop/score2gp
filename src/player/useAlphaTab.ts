@@ -1,5 +1,5 @@
 import * as alphaTab from "@coderline/alphatab";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { detectScoreEncoding, isGarbled } from "../lib/detectEncoding";
 import { forDisplay, techniquesOfBeat, type Technique } from "../lib/techniques";
 
@@ -302,6 +302,40 @@ export function useAlphaTab() {
     setSpeedState(v);
   }, []);
 
+  /**
+   * 지금 마디에 적힌 원래 빠르기(BPM).
+   *
+   * 곡 중간에 템포가 바뀌는 악보가 있어서 곡 전체의 대표 템포 하나로는
+   * 맞지 않는다. 앞 마디부터 훑어 가장 마지막에 지정된 값을 쓴다.
+   */
+  const baseTempo = useMemo(() => {
+    if (!score) return 0;
+    let tempo = score.tempo;
+    const last = Math.min(currentBar, score.masterBars.length - 1);
+    for (let i = 0; i <= last; i++) {
+      const changes = score.masterBars[i].tempoAutomations;
+      if (changes && changes.length > 0) {
+        tempo = changes[changes.length - 1].value;
+      }
+    }
+    return tempo;
+  }, [score, currentBar]);
+
+  /** 지금 실제로 들리는 빠르기. 속도를 90%로 낮췄다면 그만큼 느린 값이다. */
+  const bpm = baseTempo > 0 ? Math.round(baseTempo * speed) : 0;
+
+  /**
+   * 원하는 빠르기(BPM)로 맞춘다. 속도 배율로 환산해 적용하므로
+   * 조절 가능한 범위는 속도 한계(25~200%)를 그대로 따른다.
+   */
+  const setBpm = useCallback(
+    (value: number) => {
+      if (baseTempo <= 0) return;
+      setSpeed(value / baseTempo);
+    },
+    [baseTempo, setSpeed],
+  );
+
   const setTranspose = useCallback((semitones: number) => {
     const api = apiRef.current;
     if (!api?.score) return;
@@ -452,6 +486,8 @@ export function useAlphaTab() {
     currentBar,
     barCount,
     speed,
+    bpm,
+    baseTempo,
     transpose,
     masterVolume,
     isLooping,
@@ -472,6 +508,7 @@ export function useAlphaTab() {
     goToBar,
     seekBars,
     setSpeed,
+    setBpm,
     setTranspose,
     setMasterVolume,
     toggleLoop,

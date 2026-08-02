@@ -615,6 +615,20 @@ button.primary {
   border-radius: 6px;
   padding: 5px 8px;
 }
+.transport__bpm input {
+  font: inherit;
+  width: 62px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 5px 6px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.transport__bpm input:disabled {
+  opacity: 0.5;
+}
 .transport__transpose-value {
   min-width: 40px;
   font-variant-numeric: tabular-nums;
