@@ -39,11 +39,12 @@ def inspect(path: str) -> None:
     if doc.page_count == 0:
         raise CannotConvert("빈 PDF입니다.")
 
-    music = staves = 0
+    music = staves = letters = 0
     for pno in range(min(3, doc.page_count)):
         page = doc[pno]
         h_seg, _v, _b, glyphs = read_page(page)
         music += sum(1 for g in glyphs if g.is_music)
+        letters += len(glyphs)
         staves += len(detect_staves(h_seg, page.rect.width))
 
     if staves == 0:
@@ -53,6 +54,16 @@ def inspect(path: str) -> None:
             "스캔하거나 사진으로 찍은 악보는 아직 지원하지 않습니다."
         )
     if music == 0:
+        # 글자가 하나도 없다면 폰트를 못 알아본 게 아니라, 애초에 글자가 아니다.
+        # 음표를 글자가 아닌 그림(윤곽선)으로 저장한 PDF가 있는데, 그러면
+        # 모양만 남고 '이게 무슨 기호인지'가 사라져서 읽을 방법이 없다.
+        if letters == 0:
+            raise CannotConvert(
+                "악보 기호가 글자가 아니라 그림으로 저장된 PDF입니다.\n"
+                "이런 파일은 음표와 쉼표를 구분할 단서가 남아 있지 않아\n"
+                "아직 변환할 수 없습니다.\n"
+                "같은 악보를 다른 곳에서 받을 수 있다면 그쪽을 시도해보세요."
+            )
         raise CannotConvert(
             "오선은 찾았지만 음표를 읽지 못했습니다.\n"
             "지원하지 않는 음악 폰트로 만들어진 악보일 수 있습니다."
