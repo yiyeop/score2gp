@@ -50,6 +50,9 @@ class Event:
     extra_beats: float = 0.0
     # 잇단음표 비율. 셋잇단음표면 2/3 — 적힌 음표 셋이 둘 길이만큼만 간다.
     ratio: Fraction = Fraction(1)
+    # 검은 음표머리인데 기둥이 없다. 정상적인 음표라면 있을 수 없는 모양이라
+    # 밴딩 목표음 같은 '표시용' 머리로 본다.
+    stemless: bool = False
 
     @property
     def beats(self) -> float:
@@ -194,6 +197,7 @@ def extract_events(
         head = col[0]
         prof = head.profile
         stem_up: bool | None = None
+        stemless = False
         if head.code in prof.heads_whole:
             denom = 1
         elif head.code in prof.heads_half:
@@ -206,6 +210,7 @@ def extract_events(
             )
             if stem is None:
                 denom = 4
+                stemless = True
             else:
                 stem_up = stem.up
                 n = count_beams(stem, near_beams)
@@ -223,6 +228,7 @@ def extract_events(
                 heads=col,
                 is_slash=all(h.code in prof_slashes for h in col),
                 stem_up=stem_up,
+                stemless=stemless,
             )
         )
 

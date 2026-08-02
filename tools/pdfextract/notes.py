@@ -201,16 +201,25 @@ def _merge_bend_orphans(
     이미 TAB과 잘 맞은 원음을 건드릴 위험 없이 안전하게 정리할 수 있다.
     (곡 전체 x 순서로 먼저 합치는 방식은 시도했으나, 온음 밴딩을 반음
     두 번 화살표로 겹쳐 그리는 경우 등에서 엉뚱한 원음에 붙는 문제가 있었다.)
+
+    **기둥이 없는** 머리는 길이를 더하지 않고 아예 뺀다. 검은 음표머리에
+    기둥이 없는 건 정상적인 음표일 수 없다 — 시간을 차지하지 않는 표시라는
+    뜻이다. 밴딩을 여러 머리로 그리는 악보에서 이런 머리가 마디마다 끼어
+    박자를 부풀린다(광인들 솔로의 111·112·113·118마디가 모두 이 경우였고,
+    빼고 나니 넷 다 정확히 4박이 됐다).
+
+    프렛을 못 찾은 것(orphan)에만 적용하므로, 기둥 검출이 실패한 진짜 음표를
+    잘못 지울 위험은 낮다 — 진짜 음표라면 TAB에 숫자가 있어 orphan이 아니다.
     """
     arrows = [(g.x0, g.x1) for g in glyphs if g.code == BEND_ARROW and lo < g.x0 < hi]
-    if not arrows:
-        return beats
 
     tol = 2.0
     cleaned: list[Beat] = []
     for e, b in zip(events, beats):
         orphan = not b.is_rest and not b.notes and e.heads
         if orphan:
+            if e.stemless:
+                continue  # 시간을 차지하지 않는 표시용 머리
             hx0 = min(h.x0 for h in e.heads)
             hx1 = max(h.x1 for h in e.heads)
             near_arrow = any(hx1 >= ax0 - tol and hx0 <= ax1 + tol for ax0, ax1 in arrows)
