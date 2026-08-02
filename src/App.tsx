@@ -2,13 +2,16 @@ import { useState } from "react";
 import { useAlphaTab } from "./player/useAlphaTab";
 import { useShortcuts } from "./shortcuts/useShortcuts";
 import { APP_MODES, type AppModeId } from "./modes/registry";
-import { buildReadShortcuts } from "./modes/read/readShortcuts";
+import { READ_SHORTCUT_DOCS, buildReadShortcuts } from "./modes/read/readShortcuts";
 import { ReadSidebar } from "./modes/read/ReadSidebar";
 import { TransportBar } from "./modes/read/TransportBar";
 import { Timeline } from "./modes/read/Timeline";
 import { TechniqueTooltip } from "./modes/read/TechniqueTooltip";
 import { ShortcutHelp } from "./modes/read/ShortcutHelp";
 import { EditModeBar, EditModeSidebar } from "./modes/edit/EditMode";
+import { EditMarker } from "./modes/edit/EditMarker";
+import { useScoreEditor } from "./modes/edit/useScoreEditor";
+import { EDIT_SHORTCUT_DOCS, buildEditShortcuts } from "./modes/edit/editShortcuts";
 import { convertPdfFile, openScoreFile, saveScoreAs } from "./lib/openScore";
 import {
   EXPORT_FORMATS,
@@ -88,9 +91,15 @@ function App() {
   // 전에 바꿔 둔 결과를 그대로 열었을 때만 잠깐 알린다.
   const [reusedNotice, setReusedNotice] = useState(false);
 
+  const editor = useScoreEditor(player);
+
   useShortcuts(
     buildReadShortcuts(player, () => setHelpOpen((v) => !v)),
     mode === "read",
+  );
+  useShortcuts(
+    buildEditShortcuts(player, editor, () => setHelpOpen((v) => !v)),
+    mode === "edit",
   );
 
   const handleOpen = async () => {
@@ -193,7 +202,7 @@ function App() {
         {mode === "read" ? (
           <ReadSidebar player={player} />
         ) : (
-          <EditModeSidebar player={player} />
+          <EditModeSidebar player={player} editor={editor} />
         )}
 
         <main className="score-viewport" ref={player.viewportRef}>
@@ -259,11 +268,17 @@ function App() {
           <TransportBar player={player} onToggleHelp={() => setHelpOpen(true)} />
         </>
       ) : (
-        <EditModeBar />
+        <EditModeBar player={player} editor={editor} />
       )}
 
       {mode === "read" && <TechniqueTooltip player={player} />}
-      {helpOpen && <ShortcutHelp onClose={() => setHelpOpen(false)} />}
+      {mode === "edit" && <EditMarker player={player} />}
+      {helpOpen && (
+        <ShortcutHelp
+          docs={mode === "edit" ? EDIT_SHORTCUT_DOCS : READ_SHORTCUT_DOCS}
+          onClose={() => setHelpOpen(false)}
+        />
+      )}
     </div>
   );
 }

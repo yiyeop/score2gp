@@ -65,7 +65,10 @@ Rust 쪽은 저장소의 `convert.py`를 **먼저** 본다. 추출 로직을 고
 - **한글 인코딩**: 구형 Guitar Pro(gp3~gp5)는 문자열이 UTF-8이 아닌 로컬 인코딩(한국판 CP949)으로
   저장돼 제목·트랙명이 깨진다. 로드 전에 후보 인코딩으로 파싱해보고 깨지지 않는 것을 자동 선택하며,
   자동 판별이 틀렸을 때는 사이드바에서 직접 고를 수 있다 (`src/lib/detectEncoding.ts`)
-- **편집 모드**: 자리만 존재 (Phase 3 예정)
+- **편집 모드**: 변환이 잘못 읽은 곳을 고친다. 악보에서 음을 누르면 "3번 줄
+  5프렛"처럼 말로 알려주고, 프렛·줄·길이를 바꾸거나 쉼표로 지울 수 있다.
+  되돌리기/다시하기가 항상 하단에 있고, 숫자 키로 프렛을 바로 칠 수 있다
+  (`src/modes/edit/`)
 - 내장 데모 곡(alphaTex)으로 파일 없이 바로 체험 가능
 
 ## 구조
@@ -77,7 +80,7 @@ src/
 ├── modes/
 │   ├── registry.ts            # 모드 목록 (새 모드는 여기 등록)
 │   ├── read/                  # 읽기 모드: TrackList, TransportBar, readShortcuts, ShortcutHelp
-│   └── edit/                  # 편집 모드 스텁 (확장 계약은 EditMode.tsx 주석 참고)
+│   └── edit/                  # 편집 모드: useScoreEditor(고치기+되돌리기), EditMode, EditMarker
 ├── lib/openScore.ts           # 파일 열기 (Tauri dialog + read_score / 브라우저 폴백)
 └── demo/demoSong.ts           # 내장 데모 곡
 src-tauri/src/lib.rs           # read_score 커맨드 (파일 → 바이트)
@@ -95,7 +98,7 @@ src-tauri/src/lib.rs           # read_score 커맨드 (파일 → 바이트)
 | 1 | **벡터 PDF 직접 추출** → 음표 데이터 | ✅ |
 | 1b | 스캔 PDF용 OMR (Audiveris 사이드카) | 보류 |
 | 2 | 추출 결과 → .gp 파일 생성, GP 파일 직접 파싱 | ✅ |
-| 3 | 편집 모드 (오인식 보정) | 예정 |
+| 3 | 편집 모드 (오인식 보정) | ✅ |
 
 ### Phase 1 방향 전환 — OMR 대신 벡터 PDF 파싱
 

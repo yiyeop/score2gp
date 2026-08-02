@@ -1,7 +1,13 @@
-import { READ_SHORTCUT_DOCS } from "./readShortcuts";
+import type { ShortcutDoc } from "./readShortcuts";
 
-/** 단축키 도움말 오버레이 */
-export function ShortcutHelp({ onClose }: { onClose: () => void }) {
+/** 단축키 도움말 오버레이. 모드마다 쓸 수 있는 키가 달라 목록을 받는다. */
+export function ShortcutHelp({
+  docs,
+  onClose,
+}: {
+  docs: ShortcutDoc[];
+  onClose: () => void;
+}) {
   return (
     <div className="overlay" onClick={onClose}>
       <div className="overlay__panel" onClick={(e) => e.stopPropagation()}>
@@ -13,7 +19,7 @@ export function ShortcutHelp({ onClose }: { onClose: () => void }) {
         </div>
         <table className="shortcut-table">
           <tbody>
-            {READ_SHORTCUT_DOCS.map((s) => (
+            {docs.map((s) => (
               <tr key={s.keys}>
                 <td>
                   <kbd>{s.keys}</kbd>

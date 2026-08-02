@@ -10,6 +10,20 @@ import {
 import { exportScore, type ExportFormatId } from "../lib/exportScore";
 import { forDisplay, techniquesOfBeat, type Technique } from "../lib/techniques";
 
+/** 편집 모드에서 고른 대상. 박은 항상 있고, 쉼표라면 음이 없다. */
+export interface ScoreSelection {
+  beat: alphaTab.model.Beat;
+  note: alphaTab.model.Note | null;
+}
+
+/** 고른 음을 덮는 네모. 악보를 다시 그리거나 스크롤하면 다시 잡는다. */
+export interface SelectionBox {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 export interface TechniqueHover {
   techniques: Technique[];
   /** 화면 좌표. 툴팁을 해당 음 바로 위에 붙인다. */
@@ -62,6 +76,8 @@ export function useAlphaTab() {
   const lastBytesRef = useRef<Uint8Array | null>(null);
   // 파일에서 직접 읽은 채널별 이펙터. 트랙은 playbackInfo로 채널을 가리킨다.
   const channelEffectsRef = useRef<ChannelEffects[]>([]);
+  // 고른 음의 자리를 다시 계산하는 함수. 이펙트 안에서 만들어 밖에서도 부른다.
+  const trackSelectionRef = useRef<() => void>(() => {});
 
   const [score, setScore] = useState<alphaTab.model.Score | null>(null);
   const [scoreTitle, setScoreTitle] = useState("");
@@ -86,6 +102,12 @@ export function useAlphaTab() {
   const [encoding, setEncodingState] = useState("utf-8");
   const [isGarbledText, setIsGarbledText] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // 편집 모드에서 고른 음. 읽기 모드에서는 쓰지 않는다.
+  const [selection, setSelection] = useState<ScoreSelection | null>(null);
+  // 고른 음을 악보 위에 표시할 자리 (화면 좌표)
+  const [selectionBox, setSelectionBox] = useState<SelectionBox | null>(null);
+  const selectionRef = useRef<ScoreSelection | null>(null);
+  selectionRef.current = selection;
 
   useEffect(() => {
     const el = containerRef.current;
@@ -115,6 +137,7 @@ export function useAlphaTab() {
       if (s.tracks.length > 0) api.changeTrackVolume([...s.tracks], 1);
 
       setScore(s);
+      setSelection(null);
       setIsGarbledText(isGarbled(s));
       setScoreTitle(s.title || "제목 없음");
       setBarCount(s.masterBars.length);
@@ -175,6 +198,18 @@ export function useAlphaTab() {
       setError(err.message ?? String(err));
     });
 
+    // 편집 모드에서 고칠 음을 고른다. 음표를 정확히 누르면 그 음이,
+    // 박 언저리를 누르면 그 박의 첫 음이 잡힌다 — 초보자가 작은 숫자를
+    // 정확히 겨냥하지 않아도 되도록.
+    api.noteMouseDown.on((note) => {
+      setSelection({ beat: note.beat, note });
+    });
+    api.beatMouseDown.on((beat) => {
+      setSelection((prev) =>
+        prev?.beat === beat ? prev : { beat, note: beat.notes[0] ?? null },
+      );
+    });
+
     // 악보 위에 마우스를 올리면 그 음에 쓰인 주법을 알려준다.
     // alphaTab은 마우스를 누른 상태의 이동만 이벤트로 주기 때문에(구간 선택용),
     // 단순 호버는 boundsLookup으로 직접 찾는다.
@@ -209,19 +244,45 @@ export function useAlphaTab() {
       });
     };
 
+    // 고른 음의 자리를 다시 잡는다. 악보를 다시 그리거나 스크롤하면 어긋난다.
+    const trackSelection = () => {
+      const sel = selectionRef.current;
+      const lookup = api.boundsLookup;
+      const surface = el.querySelector<HTMLElement>(".at-surface");
+      if (!sel || !lookup || !surface) return setSelectionBox(null);
+      const bounds = lookup.findBeat(sel.beat)?.visualBounds;
+      if (!bounds) return setSelectionBox(null);
+      const rect = surface.getBoundingClientRect();
+      setSelectionBox({
+        x: rect.left + bounds.x,
+        y: rect.top + bounds.y,
+        w: bounds.w,
+        h: bounds.h,
+      });
+    };
+    trackSelectionRef.current = trackSelection;
+    api.renderFinished.on(trackSelection);
+
     el.addEventListener("mousemove", onMouseMove);
     el.addEventListener("mouseleave", clearHover);
     const viewport = viewportRef.current;
     viewport?.addEventListener("scroll", clearHover);
+    viewport?.addEventListener("scroll", trackSelection);
 
     return () => {
       el.removeEventListener("mousemove", onMouseMove);
       el.removeEventListener("mouseleave", clearHover);
       viewport?.removeEventListener("scroll", clearHover);
+      viewport?.removeEventListener("scroll", trackSelection);
       api.destroy();
       apiRef.current = null;
     };
   }, []);
+
+  // 고른 음이 바뀌면 표시 자리도 따라간다
+  useEffect(() => {
+    trackSelectionRef.current();
+  }, [selection]);
 
   const loadWithEncoding = useCallback((data: Uint8Array, enc: string) => {
     const api = apiRef.current;
@@ -368,6 +429,49 @@ export function useAlphaTab() {
    * 조옮김·트랙 표시 같은 화면 설정이 아니라 악보 자체를 내보내므로,
    * 어떤 트랙을 보고 있든 결과는 같다.
    */
+  /**
+   * 악보를 고친 뒤 화면과 소리를 다시 만든다.
+   *
+   * `finish`는 마디 길이·이음줄처럼 음표에서 계산되는 값들을 다시 맞춘다.
+   * 이걸 빼먹으면 화면은 바뀌어도 재생이 옛 길이로 흘러간다.
+   */
+  const refreshScore = useCallback(() => {
+    const api = apiRef.current;
+    if (!api?.score) return;
+    api.score.finish(api.settings);
+    // 지금 그리고 있는 트랙을 그대로 유지한다 (api.tracks가 그 목록이다)
+    api.renderScore(
+      api.score,
+      api.tracks.map((t) => api.score!.tracks.indexOf(t)),
+    );
+  }, []);
+
+  /** 고른 음을 앞/뒤 박으로 옮긴다. 마디와 시스템을 넘어 이어진다. */
+  const stepSelection = useCallback((delta: number) => {
+    setSelection((prev) => {
+      if (!prev) return prev;
+      const voice = prev.beat.voice;
+      const beats = voice.beats;
+      const at = beats.indexOf(prev.beat);
+      if (at < 0) return prev;
+
+      const next = beats[at + delta];
+      if (next) return { beat: next, note: next.notes[0] ?? null };
+
+      // 마디 끝에 닿으면 옆 마디의 같은 성부로 넘어간다
+      const bars = voice.bar.staff.bars;
+      const barAt = bars.indexOf(voice.bar);
+      const nextBar = bars[barAt + delta];
+      const nextVoice = nextBar?.voices[voice.index];
+      if (!nextVoice || nextVoice.beats.length === 0) return prev;
+      const landing =
+        delta > 0
+          ? nextVoice.beats[0]
+          : nextVoice.beats[nextVoice.beats.length - 1];
+      return { beat: landing, note: landing.notes[0] ?? null };
+    });
+  }, []);
+
   const exportAs = useCallback((format: ExportFormatId): Uint8Array | null => {
     const api = apiRef.current;
     if (!api?.score) return null;
@@ -534,6 +638,8 @@ export function useAlphaTab() {
     tabOnly,
     visibleTracks,
     hover,
+    selection,
+    selectionBox,
     techniqueGuide,
     encoding,
     isGarbledText,
@@ -548,6 +654,9 @@ export function useAlphaTab() {
     setSpeed,
     setBpm,
     exportAs,
+    refreshScore,
+    stepSelection,
+    setSelection,
     setTranspose,
     setMasterVolume,
     toggleLoop,
