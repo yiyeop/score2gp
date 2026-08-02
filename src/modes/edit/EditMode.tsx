@@ -1,11 +1,12 @@
 import type { PlayerHandle } from "../../player/useAlphaTab";
+import { TONE_CHOICES } from "../../lib/markers";
 import { DURATIONS, FRET_MAX, type ScoreEditor } from "./useScoreEditor";
 
 /**
  * 편집 모드 — 변환이 잘못 읽은 곳을 고치는 자리.
  *
  * 악보 편집 프로그램을 써 본 적 없는 사람이 쓴다고 보고 만들었다.
- * - 고른 음이 무엇인지 "3번 줄 5프렛"처럼 말로 먼저 알려준다
+ * - 지금 고친 음은 악보 위에 네모로 표시되고, 값은 아래 칸에 그대로 보인다
  * - 버튼은 크게, 한 번에 하나씩만 바꾸게 한다
  * - 잘못 눌러도 되돌리기가 항상 하단에 있다
  */
@@ -45,17 +46,6 @@ export function EditModeSidebar({
   return (
     <aside className="sidebar edit-panel">
       <h2 className="panel-title">고치기</h2>
-
-      <p className="edit-panel__what">
-        <b>{beat.voice.bar.index + 1}마디</b>의{" "}
-        {note ? (
-          <b>
-            {note.string}번 줄 {note.fret}프렛
-          </b>
-        ) : (
-          <b>쉼표</b>
-        )}
-      </p>
 
       {note ? (
         <>
@@ -135,6 +125,41 @@ export function EditModeSidebar({
         >
           점음표 {beat.dots > 0 ? "켜짐" : "꺼짐"}
         </button>
+      </section>
+
+      <section className="edit-group">
+        <h3 className="edit-group__title">
+          이 마디의 톤
+          {editor.barTone === null && (
+            <span className="edit-group__note"> — 앞 마디에서 이어짐</span>
+          )}
+        </h3>
+        <div className="edit-durations">
+          {TONE_CHOICES.map((t) => (
+            <button
+              key={t.program}
+              type="button"
+              className={`chip${editor.barTone === t.program ? " chip--active" : ""}`}
+              onClick={() => editor.setBarTone(t.program)}
+              title={t.hint}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        {editor.barTone !== null && (
+          <button
+            type="button"
+            className="chip edit-dot"
+            onClick={() => editor.setBarTone(null)}
+            title="이 마디에서 톤을 바꾸지 않고 앞에서 쓰던 소리를 이어갑니다"
+          >
+            톤 바꾸지 않기
+          </button>
+        )}
+        <p className="edit-hint">
+          여기서부터 소리가 바뀌어요. 다음에 또 바꾸기 전까지 이어집니다.
+        </p>
       </section>
 
       {note && (

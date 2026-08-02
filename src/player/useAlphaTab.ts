@@ -104,6 +104,9 @@ export function useAlphaTab() {
   const [error, setError] = useState<string | null>(null);
   // 편집 모드에서 고른 음. 읽기 모드에서는 쓰지 않는다.
   const [selection, setSelection] = useState<ScoreSelection | null>(null);
+  // 악보 '내용'이 바뀔 때마다 오른다. 편집은 같은 객체를 고치므로 참조만
+  // 보는 곳(타임라인 등)은 바뀐 걸 알아채지 못한다.
+  const [revision, setRevision] = useState(0);
   // 고른 음을 악보 위에 표시할 자리 (화면 좌표)
   const [selectionBox, setSelectionBox] = useState<SelectionBox | null>(null);
   const selectionRef = useRef<ScoreSelection | null>(null);
@@ -444,6 +447,7 @@ export function useAlphaTab() {
       api.score,
       api.tracks.map((t) => api.score!.tracks.indexOf(t)),
     );
+    setRevision((r) => r + 1);
   }, []);
 
   /** 고른 음을 앞/뒤 박으로 옮긴다. 마디와 시스템을 넘어 이어진다. */
@@ -640,6 +644,7 @@ export function useAlphaTab() {
     hover,
     selection,
     selectionBox,
+    revision,
     techniqueGuide,
     encoding,
     isGarbledText,

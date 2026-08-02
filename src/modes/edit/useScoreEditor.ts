@@ -1,5 +1,6 @@
 import * as alphaTab from "@coderline/alphatab";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toneName } from "../../lib/markers";
 import type { PlayerHandle } from "../../player/useAlphaTab";
 
 /**
@@ -220,9 +221,62 @@ export function useScoreEditor(player: PlayerHandle) {
     });
   }, [beat, apply]);
 
+  /**
+   * 이 마디에 직접 지정된 톤. 없으면 null (앞 마디에서 이어진다).
+   *
+   * 톤은 마디 첫 박에 붙는 '악기 바꾸기' 지시로 저장된다. 그 자리에만
+   * 있는지 확인해야 "여기서 바뀐다"와 "앞에서부터 그대로다"를 구분할 수 있다.
+   */
+  const barTone = useMemo(() => {
+    const first = beat?.voice.bar.voices[0]?.beats[0];
+    const auto = first?.automations.find(
+      (a) => a.type === alphaTab.model.AutomationType.Instrument,
+    );
+    return auto ? Math.round(auto.value) : null;
+  }, [beat, past, future]);
+
+  /**
+   * 이 마디의 톤을 바꾸거나 새로 넣는다. `program`이 null이면 지운다.
+   *
+   * 변환기가 톤 지시를 놓치거나 잘못 읽는 일이 있어서(악보에 글로만 적혀
+   * 있으면 특히), 사용자가 직접 채워 넣을 수 있어야 한다.
+   */
+  const setBarTone = useCallback(
+    (program: number | null) => {
+      const first = beat?.voice.bar.voices[0]?.beats[0];
+      if (!first) return;
+
+      const before = [...first.automations];
+      const kept = before.filter(
+        (a) => a.type !== alphaTab.model.AutomationType.Instrument,
+      );
+      const next = [...kept];
+      if (program !== null) {
+        const auto = new alphaTab.model.Automation();
+        auto.type = alphaTab.model.AutomationType.Instrument;
+        auto.value = program;
+        auto.ratioPosition = 0;
+        next.push(auto);
+      }
+
+      apply({
+        label: program === null ? "톤 지우기" : `톤: ${toneName(program)}`,
+        redo: () => {
+          first.automations = next;
+        },
+        undo: () => {
+          first.automations = before;
+        },
+      });
+    },
+    [beat, apply],
+  );
+
   return {
     beat,
     note,
+    barTone,
+    setBarTone,
     canUndo: past.length > 0,
     canRedo: future.length > 0,
     lastChange: past[past.length - 1]?.label ?? null,

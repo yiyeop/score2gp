@@ -11,9 +11,11 @@ import { extractMarkers } from "../../lib/markers";
  * 트랙마다 톤 지시가 따로 있어서, 다 합치면 읽을 수 없게 된다.
  */
 export function Timeline({ player }: { player: PlayerHandle }) {
+  // revision은 편집으로 악보 '내용'이 바뀌었을 때 오른다. 악보 객체는
+  // 그대로라서 이게 없으면 톤을 고쳐도 타임라인이 옛것을 계속 보여준다.
   const markers = useMemo(
     () => (player.score ? extractMarkers(player.score) : []),
-    [player.score],
+    [player.score, player.revision],
   );
 
   const sections = useMemo(

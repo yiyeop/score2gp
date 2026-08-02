@@ -866,3 +866,8 @@ kbd {
   background: rgba(79, 140, 255, 0.14);
   pointer-events: none;
 }
+
+.edit-group__note {
+  font-weight: 400;
+  color: var(--text-dim);
+}

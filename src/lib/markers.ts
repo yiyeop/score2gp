@@ -41,6 +41,22 @@ export function toneName(program: number): string {
 }
 
 /**
+ * 편집 모드에서 고를 수 있는 톤.
+ *
+ * General MIDI에는 악기가 128개 있지만 기타 악보에서 쓰는 건 몇 안 된다.
+ * 전부 늘어놓으면 초보자는 무엇을 골라야 할지 알 수 없으므로, 실제로
+ * 기타 파트에 쓰이는 것만 소리가 세지는 순서로 둔다.
+ */
+export const TONE_CHOICES: Array<{ program: number; label: string; hint: string }> = [
+  { program: 25, label: "어쿠스틱", hint: "통기타 소리" },
+  { program: 27, label: "클린", hint: "이펙터 없는 맑은 일렉 소리" },
+  { program: 28, label: "뮤트", hint: "손으로 눌러 짧게 끊는 소리" },
+  { program: 26, label: "재즈", hint: "부드럽고 둥근 소리" },
+  { program: 29, label: "오버드라이브", hint: "살짝 찌그러진 소리" },
+  { program: 30, label: "디스토션", hint: "강하게 찌그러진 소리" },
+];
+
+/**
  * 비트 텍스트에서 톤·주법 변화를 가리키는 표현들.
  *
  * Guitar Pro 파일에는 코러스·딜레이 같은 이펙터를 담는 자리가 없어서,
