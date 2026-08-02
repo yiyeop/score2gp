@@ -183,7 +183,61 @@ def read_page(page: fitz.Page):
                         )
                     )
 
+    # 음표를 글자가 아니라 도형(윤곽선)으로 저장한 악보가 있다. 그런 파일은
+    # 글리프 코드가 없어 무엇이 음표인지 알 방법이 없는데, 크기만은 규칙적이다
+    # — 음표머리는 오선 간격의 1.2배쯤 되는 채워진 타원이다.
+    # 진짜 음악 폰트가 있으면 그쪽이 훨씬 정확하므로, 없을 때만 쓴다.
+    if not any(g.is_music for g in glyphs):
+        glyphs += _glyphs_from_shapes(page, h_segments)
+
     return h_segments, v_lines, beams, glyphs
+
+
+# 오선 간격을 1로 봤을 때 도형의 크기. 실측(쏜애플 - 아지랑이)에서
+# 음표머리 1.18×1.00, 점 0.40×0.40, 온음표 1.80×1.02로 뚜렷이 갈렸다.
+_SHAPE_KINDS = (
+    (NOTEHEAD_WHOLE, (1.55, 2.10), (0.80, 1.25)),
+    (NOTEHEAD_BLACK, (0.90, 1.45), (0.80, 1.25)),
+    (AUGMENTATION_DOT, (0.25, 0.55), (0.25, 0.55)),
+)
+
+
+def _glyphs_from_shapes(page: fitz.Page, h_segments) -> list[Glyph]:
+    """채워진 도형 중 음표머리·점으로 보이는 것을 글리프처럼 만들어 준다.
+
+    SMuFL 코드를 붙여 내보내므로 뒤 단계(화음 묶기·기둥·빔·점 세기)는
+    글자로 그린 악보와 똑같이 처리된다.
+
+    쉼표는 만들지 않는다. 모양이 제각각이라 크기만으로는 가릴 수 없고,
+    잘못 넣으면 있지도 않은 박이 생겨 마디가 어그러진다.
+    """
+    staves = detect_staves(h_segments, page.rect.width)
+    if not staves:
+        return []
+    gaps = sorted(s.gap for s in staves)
+    gap = gaps[len(gaps) // 2]
+    if gap <= 0:
+        return []
+
+    out: list[Glyph] = []
+    for d in page.get_drawings():
+        if d["type"] not in ("f", "fs"):
+            continue
+        if {i[0] for i in d["items"]} != {"c"}:  # 곡선만으로 이뤄진 도형
+            continue
+        r = d["rect"]
+        w, h = r.width / gap, r.height / gap
+        for code, (wlo, whi), (hlo, hhi) in _SHAPE_KINDS:
+            if wlo <= w <= whi and hlo <= h <= hhi:
+                out.append(
+                    Glyph(
+                        code=code, char="", font="shapes",
+                        x=r.x0, y=(r.y0 + r.y1) / 2,
+                        x0=r.x0, y0=r.y0, x1=r.x1, y1=r.y1,
+                    )
+                )
+                break
+    return out
 
 
 def detect_staves(h_segments, page_width: float) -> list[Staff]:

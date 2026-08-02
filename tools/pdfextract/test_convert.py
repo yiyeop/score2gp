@@ -45,24 +45,36 @@ class Inspect(unittest.TestCase):
             inspect(path)
         self.assertIn("악보를 찾지 못했습니다", str(cm.exception))
 
-    def test_outlined_symbols_say_so(self):
-        """음표를 글자가 아닌 그림으로 저장한 PDF.
+    def test_reads_noteheads_drawn_as_shapes(self):
+        """음표를 글자가 아닌 그림으로 저장한 PDF도 통과시킨다.
 
-        실제로 이런 악보가 있다(악보바다 피아노 악보). 오선은 선이라 잡히지만
-        글자가 하나도 없어서, 폰트를 못 알아본 것과는 다른 상황이다.
+        실제로 이런 악보가 있다(악보바다 계열). 글리프 코드가 없어도
+        음표머리는 오선 간격에 맞춘 채워진 타원이라 크기로 알아볼 수 있다.
+        여기서 막아버리면 읽을 수 있는 악보까지 못 열게 된다.
         """
         def build(page):
             staff_lines(page)
-            # 음표머리를 글자가 아니라 채운 타원으로 그린다
             for x in range(60, 300, 20):
                 page.draw_oval(fitz.Rect(x, 103, x + 5.6, 107.6), fill=(0, 0, 0))
 
         path = self.make("outlined.pdf", build)
+        inspect(path)  # 음표를 찾았으므로 예외가 나면 안 된다
+
+    def test_shapes_that_are_not_noteheads_are_ignored(self):
+        """음표머리 크기가 아닌 도형에 속지 않는다.
+
+        크기만 보고 아무 도형이나 음표로 받으면, 악보가 아닌 그림까지
+        변환을 시작했다가 엉뚱한 결과를 내놓는다.
+        """
+        def build(page):
+            staff_lines(page)
+            # 음표머리라기엔 너무 큰 도형 (오선 간격의 4배)
+            page.draw_oval(fitz.Rect(60, 90, 80, 110), fill=(0, 0, 0))
+
+        path = self.make("nonotes.pdf", build)
         with self.assertRaises(CannotConvert) as cm:
             inspect(path)
-        message = str(cm.exception)
-        self.assertIn("그림으로 저장된", message)
-        self.assertNotIn("폰트", message)  # 폰트 탓으로 돌리면 안 된다
+        self.assertIn("변환할 수 없습니다", str(cm.exception))
 
     def test_a_real_score_passes(self):
         sample = "/Users/yiyeop/Downloads/광인들 Lead and Rhytm full.pdf"
