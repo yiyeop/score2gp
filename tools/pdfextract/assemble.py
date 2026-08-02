@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 
 import fitz
 
-from notes import Bar, carry_slash_chords, extract_bars
+from notes import Bar, Beat, carry_slash_chords, extract_bars
 from tuning import parse_tuning
 from structure import (
     Glyph,
@@ -285,6 +285,16 @@ def _track_names(
     return names
 
 
+def _resting_bar(index: int) -> Bar:
+    """온쉼표 한 마디. 보표를 뺀 자리를 대신 채운다."""
+    return Bar(
+        index=index,
+        beats=[Beat(x=0.0, denom=1, dots=0, is_rest=True)],
+        x0=0.0,
+        x1=0.0,
+    )
+
+
 def assemble(path: str) -> Song:
     doc = fitz.open(path)
     title = tempo = None
@@ -310,6 +320,8 @@ def assemble(path: str) -> Song:
             # 다르다. 그래서 '몇 번째 보표'가 아니라 'TAB 있는 것 중 몇 번째'로
             # 세어야 기타 파트가 시스템을 넘어 어긋나지 않는다.
             tab_slot = melody_slot = 0
+            played: set[tuple[str, int]] = set()
+            width = 0
             for track in system:
                 if track.tab:
                     key = ("tab", tab_slot)
@@ -333,6 +345,18 @@ def assemble(path: str) -> Song:
                     zone=zones.get(id(track)),
                 )
                 part.bars.extend(bars)
+                played.add(key)
+                width = max(width, len(bars))
+
+            # 쉬는 악기는 보표를 아예 빼고 찍는다. 그 마디를 그냥 건너뛰면
+            # 그 악기의 악보가 곡보다 짧아지고, 다시 나오는 자리부터 전부
+            # 앞으로 밀린다 — 같이 연주하면 박이 맞지 않는다.
+            # 그래서 빠진 만큼 온쉼표 마디를 채워 자리를 지킨다.
+            for key, part in parts.items():
+                if key in played:
+                    continue
+                for _ in range(width):
+                    part.bars.append(_resting_bar(len(part.bars)))
 
     # 리듬 슬래시는 직전 화음을 반복하라는 표기다. 시스템·페이지를 넘어
     # 이어지므로 곡 전체를 조립한 뒤에 채운다.
