@@ -10,6 +10,31 @@ npm run tauri dev     # 데스크톱 앱
 npm run dev           # 브라우저에서 프론트만 (파일 열기는 <input> 폴백)
 ```
 
+PDF 변환까지 쓰려면 추출기의 파이썬 환경이 필요하다.
+
+```bash
+cd tools/pdfextract
+python3 -m venv .venv && .venv/bin/pip install pymupdf pyguitarpro pyinstaller
+```
+
+## 배포
+
+```bash
+npm run tauri build   # .app과 .dmg가 src-tauri/target/release/bundle/ 에 생긴다
+```
+
+변환기는 PyInstaller로 실행 파일 하나(33MB)로 묶어 앱과 함께 담는다. 그래야
+사용자 기계에 파이썬이나 PyMuPDF가 없어도 변환이 돌아간다. 묶는 일은
+`tools/pdfextract/build-sidecar.sh`가 하고, 위 빌드 명령이 알아서 부른다
+(추출기 소스가 그대로면 건너뛴다).
+
+Rust 쪽은 저장소의 `convert.py`를 **먼저** 본다. 추출 로직을 고치는 동안
+매번 33MB를 다시 묶지 않아도 되게 하기 위해서다. 저장소 밖에서 실행되는
+배포본에서는 이게 없으므로 함께 담긴 실행 파일을 쓴다.
+
+사이드카는 플랫폼마다 달라서(파일 이름에 대상 트리플이 붙는다) 커밋하지
+않는다. 다른 플랫폼용 배포본을 만들려면 그 플랫폼에서 위 명령을 돌려야 한다.
+
 ## 현재 상태 — Phase 0 (플레이어)
 
 - **읽기 모드**: .gp/.gp3~.gpx/MusicXML 열기, 재생/일시정지, 트랙 선택(악보에 표시할 트랙),
@@ -19,10 +44,11 @@ npm run dev           # 브라우저에서 프론트만 (파일 열기는 <input
   블록으로, 톤 변화는 아래 마커로 표시하고 누르면 그 마디로 이동한다.
   톤 마커는 지금 악보에 표시 중인 트랙 것만 보여준다 (`src/lib/markers.ts`)
 - **PDF 변환**: 악보 PDF를 넣으면 Guitar Pro 파일로 바꿔 바로 연주할 수 있다.
-  변환 알고리즘은 `tools/pdfextract`의 Python 프로토타입이 갖고 있고 Rust가
-  이를 호출한다 (`src-tauri/src/convert.rs`). 휴리스틱을 아직 자주 고치는 중이라
-  Rust로 옮기지 않았다 — 커맨드 모양은 그대로 두었으므로 나중에 구현만 바꾸면
-  된다. **지금은 개발 환경에서만 동작한다** (배포본은 파이썬 번들이 필요)
+  변환 알고리즘은 `tools/pdfextract`의 Python 구현이 갖고 있고 Rust가 이를
+  프로세스로 부른다 (`src-tauri/src/convert.rs`). 휴리스틱을 아직 자주 고치는
+  중이라 Rust로 옮기지 않았다 — 커맨드 모양은 그대로 두었으므로 나중에 구현만
+  바꾸면 된다. 배포본에는 PyInstaller로 묶은 실행 파일을 함께 담으므로
+  **사용자 기계에 파이썬이 없어도 동작한다** (아래 "배포" 참고)
 - **주법 툴팁**: 악보의 음에 마우스를 올리면 그 음에 쓰인 주법(슬라이드·태핑·피킹 하모닉스 등)을
   초보자용 설명으로 알려준다. 사이드바에는 지금 트랙에 나오는 주법 목록이 표시되고,
   누르면 처음 나오는 마디로 이동한다 (`src/lib/techniques.ts`)
@@ -57,9 +83,9 @@ src-tauri/src/lib.rs           # read_score 커맨드 (파일 → 바이트)
 | Phase | 내용 | 상태 |
 |---|---|---|
 | 0 | GP 플레이어 (읽기 모드) | ✅ |
-| 1 | **벡터 PDF 직접 추출** → 음표 데이터 | 진행 중 |
+| 1 | **벡터 PDF 직접 추출** → 음표 데이터 | ✅ |
 | 1b | 스캔 PDF용 OMR (Audiveris 사이드카) | 보류 |
-| 2 | 추출 결과 → .gp 파일 생성, GP 파일 직접 파싱 | 예정 |
+| 2 | 추출 결과 → .gp 파일 생성 ✅ / GP 파일 직접 파싱 | 진행 중 |
 | 3 | 편집 모드 (오인식 보정) | 예정 |
 
 ### Phase 1 방향 전환 — OMR 대신 벡터 PDF 파싱
@@ -115,3 +141,4 @@ GP5 포맷은 믹스 테이블에 **chorus / reverb / phaser / tremolo / wah** �
 ## 요구 사항
 
 - Node 20+, Rust 1.88+ (Tauri 의존성 요구)
+- Python 3.11+ (PDF 변환. 배포본 사용자에게는 필요 없다)

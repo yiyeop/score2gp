@@ -27,3 +27,12 @@ dist-ssr
 __pycache__/
 *.py[cod]
 .venv/
+
+# PyInstaller — 변환기를 실행 파일로 묶을 때 나오는 부산물
+tools/pdfextract/build/
+tools/pdfextract/dist/
+tools/pdfextract/*.spec
+
+# 사이드카 실행 파일 (33MB). 플랫폼마다 달라서 커밋하지 않는다.
+# tools/pdfextract/build-sidecar.sh 로 만든다.
+src-tauri/binaries/
