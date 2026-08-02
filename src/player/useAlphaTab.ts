@@ -1,6 +1,12 @@
 import * as alphaTab from "@coderline/alphatab";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { detectScoreEncoding, isGarbled } from "../lib/detectEncoding";
+import {
+  describeEffects,
+  effectsForTrack,
+  readChannelEffects,
+  type ChannelEffects,
+} from "../lib/gpEffects";
 import { forDisplay, techniquesOfBeat, type Technique } from "../lib/techniques";
 
 export interface TechniqueHover {
@@ -24,6 +30,13 @@ export interface TrackView {
   volume: number;
   mute: boolean;
   solo: boolean;
+  /**
+   * 이 트랙에 걸린 이펙터를 사람 말로 옮긴 것 (예: "코러스 강하게").
+   *
+   * alphaTab이 버리는 정보라 파일에서 직접 읽는다 (`lib/gpEffects.ts`).
+   * 이펙터를 안 걸었거나 GP 파일이 아니면 빈 배열이다.
+   */
+  effects: string[];
 }
 
 export const SPEED_MIN = 0.25;
@@ -46,6 +59,8 @@ export function useAlphaTab() {
   const barStartsRef = useRef<number[]>([]);
   const currentBarRef = useRef(0);
   const lastBytesRef = useRef<Uint8Array | null>(null);
+  // 파일에서 직접 읽은 채널별 이펙터. 트랙은 playbackInfo로 채널을 가리킨다.
+  const channelEffectsRef = useRef<ChannelEffects[]>([]);
 
   const [score, setScore] = useState<alphaTab.model.Score | null>(null);
   const [scoreTitle, setScoreTitle] = useState("");
@@ -110,13 +125,21 @@ export function useAlphaTab() {
       // alphaTab은 로드 후 첫 트랙만 그리므로 상태를 거기에 맞춘다.
       setVisibleTracks([0]);
       setTracks(
-        s.tracks.map((t, i) => ({
-          index: i,
-          name: t.name || `트랙 ${i + 1}`,
-          volume: 1,
-          mute: false,
-          solo: false,
-        })),
+        s.tracks.map((t, i) => {
+          const fx = effectsForTrack(
+            channelEffectsRef.current,
+            t.playbackInfo.primaryChannel,
+            t.playbackInfo.program,
+          );
+          return {
+            index: i,
+            name: t.name || `트랙 ${i + 1}`,
+            volume: 1,
+            mute: false,
+            solo: false,
+            effects: fx ? describeEffects(fx) : [],
+          };
+        }),
       );
     });
 
@@ -205,6 +228,7 @@ export function useAlphaTab() {
     setIsLoading(true);
     setError(null);
     lastBytesRef.current = data;
+    channelEffectsRef.current = readChannelEffects(data);
     api.settings.importer.encoding = enc;
     api.updateSettings();
     setEncodingState(enc);
@@ -233,6 +257,7 @@ export function useAlphaTab() {
     setError(null);
     // alphaTex는 문자열 입력이라 인코딩과 무관하다. 이전 파일의 인코딩 상태를 지운다.
     lastBytesRef.current = null;
+    channelEffectsRef.current = [];
     setIsGarbledText(false);
     setEncodingState("utf-8");
     apiRef.current?.tex(tex);

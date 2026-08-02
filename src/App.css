@@ -190,6 +190,11 @@ button.primary {
   display: flex;
   gap: 4px;
 }
+.track-item__effects {
+  margin: 0 0 6px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
 .track-item__volume {
   display: flex;
   align-items: center;

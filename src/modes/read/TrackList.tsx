@@ -85,6 +85,14 @@ export function TrackList({ player }: { player: PlayerHandle }) {
                 </button>
               </div>
             </div>
+            {t.effects.length > 0 && (
+              <p
+                className="track-item__effects"
+                title="원곡에서 이 파트에 걸어 둔 효과예요. 악보에 적힌 값이라 재생 소리에는 반영되지 않아요."
+              >
+                {t.effects.join(" · ")}
+              </p>
+            )}
             <label className="track-item__volume">
               <span className="control-label">볼륨</span>
               <input
