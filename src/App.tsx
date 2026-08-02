@@ -9,11 +9,69 @@ import { Timeline } from "./modes/read/Timeline";
 import { TechniqueTooltip } from "./modes/read/TechniqueTooltip";
 import { ShortcutHelp } from "./modes/read/ShortcutHelp";
 import { EditModeBar, EditModeSidebar } from "./modes/edit/EditMode";
-import { convertPdfFile, openScoreFile, saveConverted } from "./lib/openScore";
+import { convertPdfFile, openScoreFile, saveScoreAs } from "./lib/openScore";
+import {
+  EXPORT_FORMATS,
+  suggestFileName,
+  type ExportFormatId,
+} from "./lib/exportScore";
 import { DEMO_SONG_TEX } from "./demo/demoSong";
 import "./App.css";
 
 const isTauri = () => "__TAURI_INTERNALS__" in window;
+
+/**
+ * 악보를 다른 포맷으로 내보내는 메뉴.
+ *
+ * 포맷마다 쓰는 곳이 달라서(Guitar Pro 7만 쓰는 사람, DAW로 가져갈 사람)
+ * 고를 수 있어야 한다. 무엇에 쓰는 형식인지 한 줄씩 붙여 둔다.
+ */
+function ExportMenu({
+  hasConverted,
+  saved,
+  onExport,
+}: {
+  hasConverted: boolean;
+  saved: boolean;
+  onExport: (id: ExportFormatId) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  // .gp5는 변환기가 쓴 파일을 옮기는 것이라 변환한 악보에서만 낼 수 있다.
+  const formats = EXPORT_FORMATS.filter((f) => !f.convertedOnly || hasConverted);
+
+  return (
+    <div className="export">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        title="악보를 다른 형식으로 저장합니다"
+      >
+        {saved ? "내보냄 ✓" : "내보내기"}
+      </button>
+      {open && (
+        <>
+          <div className="export__backdrop" onClick={() => setOpen(false)} />
+          <ul className="export__menu">
+            {formats.map((f) => (
+              <li key={f.id}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpen(false);
+                    onExport(f.id);
+                  }}
+                >
+                  <span className="export__label">{f.label}</span>
+                  <span className="export__hint">{f.hint}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
+  );
+}
 
 function App() {
   // 악보 뷰(alphaTab)는 모드와 무관하게 App이 소유한다.
@@ -27,6 +85,8 @@ function App() {
   // 방금 변환해서 만든 파일의 경로. 임시 폴더에 있으므로 저장할 수 있게 한다.
   const [converted, setConverted] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  // 전에 바꿔 둔 결과를 그대로 열었을 때만 잠깐 알린다.
+  const [reusedNotice, setReusedNotice] = useState(false);
 
   useShortcuts(
     buildReadShortcuts(player, () => setHelpOpen((v) => !v)),
@@ -38,6 +98,8 @@ function App() {
     if (opened) {
       setFileName(opened.name);
       setConverted(null);
+      setReusedNotice(false);
+      setSaved(false);
       player.loadBytes(opened.data);
     }
   };
@@ -45,6 +107,8 @@ function App() {
   const handleDemo = () => {
     setFileName(null);
     setConverted(null);
+    setReusedNotice(false);
+    setSaved(false);
     player.loadTex(DEMO_SONG_TEX);
   };
 
@@ -57,6 +121,7 @@ function App() {
         setFileName(result.name);
         setConverted(result.converted);
         setSaved(false);
+        setReusedNotice(result.fromCache);
         player.loadBytes(result.data);
       }
     } catch (e) {
@@ -66,11 +131,16 @@ function App() {
     }
   };
 
-  const handleSave = async () => {
-    if (!converted || !fileName) return;
+  const handleExport = async (id: ExportFormatId) => {
+    const format = EXPORT_FORMATS.find((f) => f.id === id);
+    if (!format || !player.score) return;
     setConvertError(null);
     try {
-      if (await saveConverted(converted, fileName)) setSaved(true);
+      // .gp5는 변환기가 이미 써 둔 파일이라 그대로 옮긴다.
+      const content = id === "gp5" ? converted : player.exportAs(id);
+      if (!content) return;
+      const name = suggestFileName(fileName ?? player.scoreTitle, format.extension);
+      if (await saveScoreAs(content, name, format)) setSaved(true);
     } catch (e) {
       setConvertError(e instanceof Error ? e.message : String(e));
     }
@@ -106,10 +176,12 @@ function App() {
               {converting ? "변환 중…" : "PDF 변환"}
             </button>
           )}
-          {converted && (
-            <button type="button" onClick={handleSave} title="변환한 악보를 파일로 남깁니다">
-              {saved ? "저장됨 ✓" : "GP 파일 저장"}
-            </button>
+          {isTauri() && player.score && (
+            <ExportMenu
+              hasConverted={converted !== null}
+              saved={saved}
+              onExport={handleExport}
+            />
           )}
           <button type="button" className="primary" onClick={handleOpen}>
             악보 열기
@@ -167,6 +239,16 @@ function App() {
           {player.isLoading && <div className="loading">악보 불러오는 중…</div>}
           {(player.error || convertError) && (
             <div className="error-banner">⚠️ {convertError ?? player.error}</div>
+          )}
+          {reusedNotice && !convertError && (
+            <button
+              type="button"
+              className="notice"
+              onClick={() => setReusedNotice(false)}
+              title="누르면 사라져요"
+            >
+              전에 바꿔 둔 결과라 기다리지 않고 바로 열었어요.
+            </button>
           )}
         </main>
       </div>

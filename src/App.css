@@ -708,3 +708,68 @@ kbd {
   font-size: 12px;
   font-family: inherit;
 }
+
+/* 내보내기 메뉴 */
+.export {
+  position: relative;
+}
+.export__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+}
+.export__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 21;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  width: 280px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+}
+.export__menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.export__menu button:hover {
+  background: var(--accent-soft);
+}
+.export__label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+}
+.export__hint {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: normal;
+}
+
+/* 변환 결과를 다시 쓴 경우의 알림 */
+.notice {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: 10;
+  font-size: 12px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: var(--panel);
+  border: 1px solid var(--accent);
+  color: var(--text-dim);
+}

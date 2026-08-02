@@ -15,7 +15,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             read_score,
             convert::convert_pdf,
-            convert::save_score
+            convert::save_score,
+            convert::write_score
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

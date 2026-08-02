@@ -7,6 +7,7 @@ import {
   readChannelEffects,
   type ChannelEffects,
 } from "../lib/gpEffects";
+import { exportScore, type ExportFormatId } from "../lib/exportScore";
 import { forDisplay, techniquesOfBeat, type Technique } from "../lib/techniques";
 
 export interface TechniqueHover {
@@ -361,6 +362,18 @@ export function useAlphaTab() {
     [baseTempo, setSpeed],
   );
 
+  /**
+   * 화면에 열린 악보를 다른 포맷의 바이트로 만든다.
+   *
+   * 조옮김·트랙 표시 같은 화면 설정이 아니라 악보 자체를 내보내므로,
+   * 어떤 트랙을 보고 있든 결과는 같다.
+   */
+  const exportAs = useCallback((format: ExportFormatId): Uint8Array | null => {
+    const api = apiRef.current;
+    if (!api?.score) return null;
+    return exportScore(api.score, format, api.settings);
+  }, []);
+
   const setTranspose = useCallback((semitones: number) => {
     const api = apiRef.current;
     if (!api?.score) return;
@@ -534,6 +547,7 @@ export function useAlphaTab() {
     seekBars,
     setSpeed,
     setBpm,
+    exportAs,
     setTranspose,
     setMasterVolume,
     toggleLoop,
