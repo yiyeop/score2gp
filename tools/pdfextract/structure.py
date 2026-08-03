@@ -125,8 +125,12 @@ def _merge_coverage(segments: list[tuple[float, float]]) -> float:
     return total
 
 
-def read_page(page: fitz.Page):
-    """페이지에서 선·글리프·빔을 원시 형태로 뽑는다."""
+def read_page(page: fitz.Page, rest_shapes: dict[str, int] | None = None):
+    """페이지에서 선·글리프·빔을 원시 형태로 뽑는다.
+
+    `rest_shapes`는 그림으로 그린 악보에서 배운 '이 윤곽은 몇 분쉼표'
+    대응표다(`shapes.fit`). 곡 전체를 봐야 알 수 있어서 밖에서 넘겨받는다.
+    """
     h_segments: dict[float, list[tuple[float, float]]] = collections.defaultdict(list)
     v_lines: list[tuple[float, float, float]] = []
     beams: list[tuple[float, float, float, float]] = []
@@ -188,28 +192,42 @@ def read_page(page: fitz.Page):
     # — 음표머리는 오선 간격의 1.2배쯤 되는 채워진 타원이다.
     # 진짜 음악 폰트가 있으면 그쪽이 훨씬 정확하므로, 없을 때만 쓴다.
     if not any(g.is_music for g in glyphs):
-        glyphs += _glyphs_from_shapes(page, h_segments)
+        glyphs += _glyphs_from_shapes(page, h_segments, rest_shapes, v_lines)
 
     return h_segments, v_lines, beams, glyphs
 
 
 # 오선 간격을 1로 봤을 때 도형의 크기. 실측(쏜애플 - 아지랑이)에서
-# 음표머리 1.18×1.00, 점 0.40×0.40, 온음표 1.80×1.02로 뚜렷이 갈렸다.
+# 음표머리 1.18×1.00, 점 0.40×0.40, 온음표 1.68×1.00으로 뚜렷이 갈렸다.
+# X 음표머리(데드 노트)는 1.16×1.00과 1.53×1.00 두 가지로 나온다.
 _SHAPE_KINDS = (
-    (NOTEHEAD_WHOLE, (1.55, 2.10), (0.80, 1.25)),
-    (NOTEHEAD_BLACK, (0.90, 1.45), (0.80, 1.25)),
+    (NOTEHEAD_WHOLE, (1.60, 2.10), (0.80, 1.25)),
+    (NOTEHEAD_BLACK, (0.90, 1.58), (0.80, 1.25)),
     (AUGMENTATION_DOT, (0.25, 0.55), (0.25, 0.55)),
 )
 
 
-def _glyphs_from_shapes(page: fitz.Page, h_segments) -> list[Glyph]:
+REST_CODE = {1: 0xE4E3, 2: 0xE4E4, 4: 0xE4E5, 8: 0xE4E6, 16: 0xE4E7, 32: 0xE4E8}
+FLAG_CODE = {
+    ("up", 8): FLAG_8_UP, ("down", 8): FLAG_8_DOWN,
+    ("up", 16): FLAG_16_UP, ("down", 16): FLAG_16_DOWN,
+    ("up", 32): FLAG_32_UP, ("down", 32): FLAG_32_DOWN,
+}
+
+
+def _glyphs_from_shapes(
+    page: fitz.Page,
+    h_segments,
+    rest_shapes: dict[str, int] | None = None,
+    v_lines=(),
+) -> list[Glyph]:
     """채워진 도형 중 음표머리·점으로 보이는 것을 글리프처럼 만들어 준다.
 
     SMuFL 코드를 붙여 내보내므로 뒤 단계(화음 묶기·기둥·빔·점 세기)는
     글자로 그린 악보와 똑같이 처리된다.
 
-    쉼표는 만들지 않는다. 모양이 제각각이라 크기만으로는 가릴 수 없고,
-    잘못 넣으면 있지도 않은 박이 생겨 마디가 어그러진다.
+    쉼표는 크기로 가릴 수 없어서(4분쉼표와 샾이 거의 같은 크기다) 곡
+    전체를 보고 따로 배운다. `rest_shapes`가 그 결과다 — `shapes` 참고.
     """
     staves = detect_staves(h_segments, page.rect.width)
     if not staves:
@@ -219,13 +237,32 @@ def _glyphs_from_shapes(page: fitz.Page, h_segments) -> list[Glyph]:
     if gap <= 0:
         return []
 
+    # 음표머리는 줄 위 아니면 칸 안에 온다 — 오선 맨 윗줄에서 반 칸의
+    # 정수배 자리다. 이걸 확인해야 크기가 비슷한 표시류를 걸러낼 수 있다.
+    # 실측: 음표머리는 격자에서 0.01칸 벗어나는데, 스트로크 표시(⊓ ∨)는
+    # 0.32칸이라 자리로 뚜렷이 갈린다.
+    scores = [s for s in staves if s.kind == "score"]
+
+    def on_grid(cy: float) -> bool:
+        if not scores:
+            return False
+        st = min(scores, key=lambda s: min(abs(cy - s.top), abs(cy - s.bottom)))
+        pos = (cy - st.top) / st.gap
+        return -6.0 <= pos <= 10.0 and abs(pos * 2 - round(pos * 2)) <= 0.12
+
     out: list[Glyph] = []
     for d in page.get_drawings():
         if d["type"] not in ("f", "fs"):
             continue
-        if {i[0] for i in d["items"]} != {"c"}:  # 곡선만으로 이뤄진 도형
+        kinds = {i[0] for i in d["items"]}
+        if not kinds <= {"c", "l"}:
             continue
         r = d["rect"]
+        # X 음표머리(데드 노트)는 곡선만으로 그려지지 않는다 — 획 끝을
+        # 직선으로 닫는다. 곡선만 받으면 이런 음표가 통째로 사라지므로
+        # 직선이 섞인 도형도 받되, 자리가 음표머리 격자에 맞는지 본다.
+        if kinds != {"c"} and not on_grid((r.y0 + r.y1) / 2):
+            continue
         w, h = r.width / gap, r.height / gap
         for code, (wlo, whi), (hlo, hhi) in _SHAPE_KINDS:
             if wlo <= w <= whi and hlo <= h <= hhi:
@@ -237,6 +274,34 @@ def _glyphs_from_shapes(page: fitz.Page, h_segments) -> list[Glyph]:
                     )
                 )
                 break
+
+    if rest_shapes:
+        from shapes import FLAG, candidates
+
+        for kind, sig, r in candidates(page, staves, gap, out, v_lines):
+            denom = rest_shapes.get(sig)
+            if denom is None:
+                continue
+            if kind == FLAG:
+                # 플래그는 기둥 끝에서 찾는다. 상자 한가운데를 기준점으로
+                # 삼으면 기둥 끝에서 멀어져 못 찾으므로 붙은 쪽 끝을 쓴다.
+                up = sig.endswith("up")
+                out.append(
+                    Glyph(
+                        code=FLAG_CODE[("up" if up else "down", denom)],
+                        char="", font="shapes",
+                        x=r.x0, y=r.y0 if up else r.y1,
+                        x0=r.x0, y0=r.y0, x1=r.x1, y1=r.y1,
+                    )
+                )
+            else:
+                out.append(
+                    Glyph(
+                        code=REST_CODE[denom], char="", font="shapes",
+                        x=r.x0, y=(r.y0 + r.y1) / 2,
+                        x0=r.x0, y0=r.y0, x1=r.x1, y1=r.y1,
+                    )
+                )
     return out
 
 
@@ -457,7 +522,16 @@ def _staff_verticals(staff: Staff, v_lines, may_overrun: bool = False) -> list[f
     )
 
 
-def detect_barlines(track: TrackStaff, v_lines) -> list[float]:
+def merge_doubles(found: list[float]) -> list[float]:
+    """겹세로줄(반복 기호 등)은 선이 2~3개 붙어 있으므로 하나로 본다."""
+    merged: list[float] = []
+    for x in sorted(found):
+        if not merged or x - merged[-1] > 4:
+            merged.append(x)
+    return merged
+
+
+def detect_barlines(track: TrackStaff, v_lines, merge: bool = True) -> list[float]:
     """마디선만 골라낸다.
 
     음표 기둥(stem)도 보표 높이만큼 긴 세로선이라 길이만으로는 구분되지 않는다.
@@ -465,6 +539,13 @@ def detect_barlines(track: TrackStaff, v_lines) -> list[float]:
 
     1. 오선과 TAB을 한 줄로 관통 (Finale 계열)
     2. 보표마다 따로 그리되 같은 x에 나타남 (Guitar Pro·MuseScore 계열)
+
+    `merge=False`면 붙어 있는 선을 합치지 않고 그대로 준다. 시스템 전체의
+    합의를 볼 때는 합치기 전 목록이어야 한다 — 합치면 **살아남는 쪽이
+    왼쪽 선**이라, 마디선 바로 왼쪽에 음표 기둥이 있는 보표에서 진짜
+    마디선이 기둥에 밀려 사라진다. 실제로 ONCE의 보컬 보표에서 기둥
+    315.8이 마디선 319.5를 지워, 다른 보표와 3.7pt 어긋나는 바람에
+    합의에 실패하고 두 마디가 한 마디로 붙었다.
     """
     found: list[float] = []
 
@@ -483,9 +564,4 @@ def detect_barlines(track: TrackStaff, v_lines) -> list[float]:
     else:
         found = _staff_verticals(track.score or track.tab, v_lines)
 
-    # 겹세로줄(반복 기호 등)은 선이 2~3개 붙어 있으므로 하나로 본다
-    merged: list[float] = []
-    for x in found:
-        if not merged or x - merged[-1] > 4:
-            merged.append(x)
-    return merged
+    return merge_doubles(found) if merge else sorted(found)

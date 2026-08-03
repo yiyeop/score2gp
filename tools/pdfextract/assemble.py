@@ -7,18 +7,22 @@
 
 from __future__ import annotations
 
+import collections
 import re
 from dataclasses import dataclass, field
+from fractions import Fraction
 
 import fitz
 
 from notes import Bar, Beat, carry_slash_chords, extract_bars
+from shapes import candidates, fit
 from tuning import parse_tuning
 from structure import (
     Glyph,
     TrackStaff,
     detect_barlines,
     detect_staves,
+    merge_doubles,
     pair_tracks,
     read_page,
 )
@@ -186,13 +190,17 @@ def consensus_barlines(
 
     같은 시스템의 악기들은 마디선이 같은 x에 있다. 반면 음표 기둥은 한 보표에만
     나타나므로, 여러 보표에서 함께 발견된 위치만 남기면 기둥을 걸러낼 수 있다.
+
+    투표는 **겹세로줄을 합치기 전** 목록으로 한다. 합치고 나면 왼쪽 선만
+    남아서, 마디선 왼쪽에 기둥이 붙은 보표는 진짜 마디선을 잃고 이웃과
+    어긋나 버린다. 합치는 건 표를 다 센 뒤에 한다.
     """
     if not system:
         return []
 
     votes: list[tuple[float, int]] = []
     for i, track in enumerate(system):
-        for x in detect_barlines(track, v_lines):
+        for x in detect_barlines(track, v_lines, merge=False):
             for j, (cx, _n) in enumerate(votes):
                 if abs(cx - x) <= tolerance:
                     votes[j] = (cx, _n + 1)
@@ -201,7 +209,7 @@ def consensus_barlines(
                 votes.append((x, 1))
 
     need = 2 if len(system) > 1 else 1
-    found = sorted(x for x, n in votes if n >= need)
+    found = merge_doubles([x for x, n in votes if n >= need])
 
     # 보표가 하나뿐인 시스템(보컬만 나오는 줄 등)은 서로 대조할 상대가 없어서
     # 음표 기둥이 마디선으로 섞여 들어온다. 마디 폭이 들쭉날쭉해지므로,
@@ -297,17 +305,34 @@ def _resting_bar(index: int) -> Bar:
     )
 
 
-def assemble(path: str) -> Song:
-    doc = fitz.open(path)
+def _shape_candidates(page, staves, glyphs, v_lines) -> list[tuple[str, str, object]]:
+    """그림으로 그린 악보에서 쉼표일 수 있는 도형을 모은다.
+
+    글자로 된 음악 폰트가 있는 악보에는 해당 없다 — 그런 악보의 쉼표는
+    글리프 코드로 이미 읽고 있다.
+    """
+    made = [g for g in glyphs if g.font == "shapes"]
+    if not made or not staves:
+        return []
+    gaps = sorted(s.gap for s in staves)
+    return candidates(page, staves, gaps[len(gaps) // 2], made, v_lines)
+
+
+def _build(
+    doc, rest_shapes: dict[str, int] | None, observe: bool
+) -> tuple[Song, list[tuple[Fraction, collections.Counter]]]:
     title = tempo = None
     tuning = None
     parts: dict[tuple[str, int], Part] = {}
+    rows: list[tuple[Fraction, collections.Counter]] = []
 
     for pno in range(len(doc)):
         page = doc[pno]
-        h_seg, v_lines, beams, glyphs = read_page(page)
-        tracks = pair_tracks(detect_staves(h_seg, page.rect.width))
+        h_seg, v_lines, beams, glyphs = read_page(page, rest_shapes)
+        staves = detect_staves(h_seg, page.rect.width)
+        tracks = pair_tracks(staves)
         systems = split_systems(tracks, v_lines)
+        shape_cands = _shape_candidates(page, staves, glyphs, v_lines) if observe else []
 
         if pno == 0:
             title, tempo = read_metadata(page, glyphs)
@@ -351,6 +376,8 @@ def assemble(path: str) -> Song:
                 part.bars.extend(bars)
                 played.add(key)
                 width = max(width, len(bars))
+                if shape_cands and track.score:
+                    rows += _deficits(bars, track.score, shape_cands)
 
             # 쉬는 악기는 보표를 아예 빼고 찍는다. 그 마디를 그냥 건너뛰면
             # 그 악기의 악보가 곡보다 짧아지고, 다시 나오는 자리부터 전부
@@ -368,4 +395,40 @@ def assemble(path: str) -> Song:
         carry_slash_chords(part.bars)
 
     ordered = [parts[k] for k in sorted(parts, key=lambda k: (k[0] != "tab", k[1]))]
-    return Song(title=title, tempo=tempo, parts=ordered, tuning=tuning)
+    return Song(title=title, tempo=tempo, parts=ordered, tuning=tuning), rows
+
+
+# 박자표는 아직 읽지 않아서 4/4로 본다. 쉼표를 배울 때도 같은 가정을 쓴다.
+BAR_BEATS = Fraction(4)
+
+
+def _deficits(bars, score, shape_cands) -> list[tuple[Fraction, collections.Counter]]:
+    """마디마다 '몇 박이 모자란지'와 '그 안에 있는 도형'을 짝지어 둔다."""
+    out = []
+    lo, hi = score.top - score.gap * 0.7, score.bottom + score.gap * 0.7
+    for bar in bars:
+        counts = collections.Counter(
+            sig for _kind, sig, r in shape_cands
+            if bar.x0 < (r.x0 + r.x1) / 2 < bar.x1 and lo < (r.y0 + r.y1) / 2 < hi
+        )
+        if not counts:
+            continue
+        have = sum(
+            (Fraction(b.quarters).limit_denominator(64) for b in bar.beats),
+            Fraction(0),
+        )
+        out.append((BAR_BEATS - have, counts))
+    return out
+
+
+def assemble(path: str) -> Song:
+    doc = fitz.open(path)
+    song, rows = _build(doc, None, observe=True)
+
+    # 그림으로 그린 악보는 쉼표를 크기로 가릴 수 없다. 모자란 박을 보고
+    # 어느 윤곽이 몇 분쉼표인지 배운 다음, 그걸 넣어 한 번 더 조립한다.
+    # 배울 게 없으면(글자로 된 악보) 첫 결과를 그대로 쓴다.
+    rest_shapes = fit(rows) if rows else {}
+    if rest_shapes:
+        song, _ = _build(doc, rest_shapes, observe=False)
+    return song

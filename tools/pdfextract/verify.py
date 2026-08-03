@@ -30,15 +30,26 @@ def main() -> None:
     song = assemble(path)
 
     bars_total = bars_ok = 0
+    tab_total = tab_ok = 0
     sounds = sounds_with_frets = 0
     problems: list[str] = []
 
     for part in song.parts:
-        for bar in part.bars:
+        for i, bar in enumerate(part.bars):
             if not bar.beats:
                 continue
             bars_total += 1
             total = sum(Fraction(b.quarters).limit_denominator(64) for b in bar.beats)
+            # 못갖춘마디(pickup)로 시작하는 곡이 있다. 첫 마디가 짧은 건
+            # 정상이고 변환 결과도 맞는데, 그냥 세면 오류로 잡힌다.
+            # 넘치는 첫 마디는 진짜 오류이므로 짧을 때만 봐준다.
+            if i == 0 and total < expected:
+                total = expected
+            # GP로 내보내는 건 TAB이 있는 악기뿐이라 따로도 센다. 보컬 보표는
+            # 결과물에 영향이 없는데도 전체 수치를 끌어내리기 때문이다.
+            if part.has_tab:
+                tab_total += 1
+                tab_ok += total == expected
             if total == expected:
                 bars_ok += 1
             else:
@@ -62,6 +73,7 @@ def main() -> None:
         return f"{a / b * 100:5.1f}%" if b else "  n/a"
 
     print(f"마디 길이 일치 : {bars_ok:5}/{bars_total:<5} {pct(bars_ok, bars_total)}")
+    print(f"  이 중 TAB    : {tab_ok:5}/{tab_total:<5} {pct(tab_ok, tab_total)}")
     print(
         f"프렛 결합률    : {sounds_with_frets:5}/{sounds:<5} "
         f"{pct(sounds_with_frets, sounds)}"
