@@ -9,6 +9,7 @@ import {
 } from "../lib/gpEffects";
 import { exportScore, type ExportFormatId } from "../lib/exportScore";
 import { forDisplay, techniquesOfBeat, type Technique } from "../lib/techniques";
+import { barRangeToTicks, normalizeBarRange, type BarRange } from "../lib/loopRange";
 
 /** 편집 모드에서 고른 대상. 박은 항상 있고, 쉼표라면 음이 없다. */
 export interface ScoreSelection {
@@ -73,6 +74,12 @@ export function useAlphaTab() {
   const apiRef = useRef<alphaTab.AlphaTabApi | null>(null);
   const barStartsRef = useRef<number[]>([]);
   const currentBarRef = useRef(0);
+  // 구간 반복(마디 A-B)과 곡 전체 반복 토글은 alphaTab의 단일 `isLooping`
+  // 플래그를 공유한다. 구간이 지정돼 있으면 항상 그 구간을 반복하고,
+  // 해제되면 곡 전체 반복 토글의 상태로 되돌아간다 — 이 판단을 하려면
+  // 두 상태를 이벤트 콜백(클로저) 안에서도 최신값으로 읽을 ref가 필요하다.
+  const barLoopRangeRef = useRef<BarRange | null>(null);
+  const isLoopingRef = useRef(false);
   const lastBytesRef = useRef<Uint8Array | null>(null);
   // 파일에서 직접 읽은 채널별 이펙터. 트랙은 playbackInfo로 채널을 가리킨다.
   const channelEffectsRef = useRef<ChannelEffects[]>([]);
@@ -91,6 +98,8 @@ export function useAlphaTab() {
   const [transpose, setTransposeState] = useState(0);
   const [masterVolume, setMasterVolumeState] = useState(1);
   const [isLooping, setIsLooping] = useState(false);
+  // 시작/끝 마디를 직접 골라 지정한 구간 반복. null이면 지정 안 됨.
+  const [barLoopRange, setBarLoopRangeState] = useState<BarRange | null>(null);
   const [metronomeOn, setMetronomeOn] = useState(false);
   const [countInOn, setCountInOn] = useState(false);
   const [tabOnly, setTabOnly] = useState(false);
@@ -111,6 +120,8 @@ export function useAlphaTab() {
   const [selectionBox, setSelectionBox] = useState<SelectionBox | null>(null);
   const selectionRef = useRef<ScoreSelection | null>(null);
   selectionRef.current = selection;
+  isLoopingRef.current = isLooping;
+  barLoopRangeRef.current = barLoopRange;
 
   useEffect(() => {
     const el = containerRef.current;
@@ -147,6 +158,11 @@ export function useAlphaTab() {
       currentBarRef.current = 0;
       setCurrentBar(0);
       setTransposeState(0);
+      // 곡이 바뀌면 이전 곡의 tick 기준 구간은 의미가 없어진다.
+      api.playbackRange = null;
+      barLoopRangeRef.current = null;
+      setBarLoopRangeState(null);
+      api.isLooping = isLoopingRef.current;
       setIsLoading(false);
       setError(null);
       // alphaTab은 로드 후 첫 트랙만 그리므로 상태를 거기에 맞춘다.
@@ -503,12 +519,58 @@ export function useAlphaTab() {
     setMasterVolumeState(v);
   }, []);
 
+  /**
+   * alphaTab에는 반복 on/off 플래그(`isLooping`)가 하나뿐이라, 구간 반복과
+   * 곡 전체 반복 두 UI 상태를 여기서 하나로 합친다.
+   *
+   * 구간이 지정돼 있으면(마디 A-B) 그 구간을 무조건 반복한다 — 곡 전체
+   * 반복 토글을 껐다 켜도 구간이 있는 동안은 동작이 바뀌지 않는다. 구간을
+   * 해제하면 그제야 곡 전체 반복 토글의 상태가 다시 적용된다. 두 기능이
+   * "동시 활성 시 우선순위"를 요구할 때 구간 쪽을 우선하는 게 사용자가
+   * 방금 한 더 구체적인 지정(구간 선택)을 존중하는 선택이라 판단했다.
+   */
+  const applyLoopMode = useCallback(() => {
+    const api = apiRef.current;
+    if (!api) return;
+    api.isLooping = barLoopRangeRef.current !== null || isLoopingRef.current;
+  }, []);
+
   const toggleLoop = useCallback(() => {
     const api = apiRef.current;
     if (!api) return;
-    api.isLooping = !api.isLooping;
-    setIsLooping(api.isLooping);
-  }, []);
+    const next = !isLoopingRef.current;
+    isLoopingRef.current = next;
+    setIsLooping(next);
+    applyLoopMode();
+  }, [applyLoopMode]);
+
+  /** 시작·끝 마디를 지정해 그 구간만 반복 재생한다. 순서는 자동으로 정렬된다. */
+  const setBarLoopRange = useCallback(
+    (startBar: number, endBar: number) => {
+      const api = apiRef.current;
+      const starts = barStartsRef.current;
+      if (!api || starts.length === 0) return;
+      const range = normalizeBarRange(startBar, endBar, starts.length);
+      if (!range) return;
+      const ticks = barRangeToTicks(range, starts, api.endTick);
+      if (!ticks) return;
+      api.playbackRange = ticks;
+      barLoopRangeRef.current = range;
+      setBarLoopRangeState(range);
+      applyLoopMode();
+    },
+    [applyLoopMode],
+  );
+
+  /** 구간 반복 지정을 해제한다. 곡 전체 반복 토글은 그대로 유지된다. */
+  const clearBarLoopRange = useCallback(() => {
+    const api = apiRef.current;
+    if (!api) return;
+    api.playbackRange = null;
+    barLoopRangeRef.current = null;
+    setBarLoopRangeState(null);
+    applyLoopMode();
+  }, [applyLoopMode]);
 
   const toggleMetronome = useCallback(() => {
     const api = apiRef.current;
@@ -637,6 +699,7 @@ export function useAlphaTab() {
     transpose,
     masterVolume,
     isLooping,
+    barLoopRange,
     metronomeOn,
     countInOn,
     tabOnly,
@@ -665,6 +728,8 @@ export function useAlphaTab() {
     setTranspose,
     setMasterVolume,
     toggleLoop,
+    setBarLoopRange,
+    clearBarLoopRange,
     toggleMetronome,
     toggleCountIn,
     toggleTabOnly,

@@ -188,7 +188,11 @@ export function TransportBar({
           className={`chip${player.isLooping ? " chip--active" : ""}`}
           onClick={player.toggleLoop}
           disabled={disabled}
-          title="곡 전체 반복 (L)"
+          title={
+            player.barLoopRange
+              ? "곡 전체 반복 (L) — 지금은 타임라인에 지정한 구간 반복이 우선 적용 중이에요"
+              : "곡 전체 반복 (L)"
+          }
         >
           🔁 반복
         </button>

@@ -473,6 +473,21 @@ button.primary {
   color: var(--text-dim);
   white-space: nowrap;
 }
+.timeline__head-right {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.timeline__loop-clear {
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 4px;
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--text);
+  white-space: nowrap;
+}
 
 .timeline__strip {
   position: relative;
@@ -519,6 +534,27 @@ button.primary {
   width: 2px;
   background: var(--accent);
   pointer-events: none;
+}
+/* 마디 A-B 구간 반복: 지정된 구간은 노란 테두리 오버레이로, 시작점만
+   찍고 끝점을 기다리는 중에는 얇은 점선으로 표시한다. */
+.timeline__loop-range {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(240, 173, 78, 0.22);
+  border-left: 2px solid #f0ad4e;
+  border-right: 2px solid #f0ad4e;
+  pointer-events: none;
+  z-index: 1;
+}
+.timeline__loop-pending {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  border-left: 2px dashed #f0ad4e;
+  pointer-events: none;
+  z-index: 1;
 }
 
 .timeline__tones {
