@@ -11,7 +11,8 @@ from __future__ import annotations
 
 import unittest
 
-from notes import Bar, Beat, PlayedNote, _merge_bend_orphans, split_voices
+from notes import (Bar, Beat, PlayedNote, _carry_ties, _merge_bend_orphans,
+                   split_voices)
 from rhythm import Event
 from structure import Glyph
 
@@ -84,6 +85,57 @@ class BendDecorations(unittest.TestCase):
         # 기둥이 있으면 근거가 약하므로 함부로 지우지 않는다
         beats = self.make(stemless=False)
         self.assertEqual(len(beats), 2)
+
+
+class CarryTies(unittest.TestCase):
+    """타이로 이어진 음은 TAB에 숫자를 다시 적지 않는다.
+
+    그대로 두면 짚는 자리가 없어 재생할 때 소리가 뚝 끊긴다.
+    다만 근거 없이 앞 음을 덮어쓰면 진짜로 못 읽은 프렛까지 가려지므로,
+    이음줄 곡선이 실제로 그려져 있을 때만 물려받아야 한다.
+    """
+
+    GAP = 4.2
+
+    @staticmethod
+    def head(x: float, y: float) -> Glyph:
+        return Glyph(code=0xE0A4, char="", font="GPBravuraRegular",
+                     x=x, y=y, x0=x, y0=y - 2.1, x1=x + 4.5, y1=y + 2.1)
+
+    @staticmethod
+    def curve(x: float, y: float) -> Glyph:
+        return Glyph(code=0, char="", font="ties",
+                     x=x, y=y, x0=x - 6.0, y0=y - 2.0, x1=x + 6.0, y1=y + 2.0)
+
+    def run_case(self, second_y: float, curves: list[Glyph]):
+        first = Beat(x=100.0, denom=4, dots=0, is_rest=False,
+                     notes=[PlayedNote(string=2, fret=14)])
+        second = Beat(x=120.0, denom=4, dots=0, is_rest=False)
+        events = [
+            Event(x=100.0, denom=4, dots=0, is_rest=False,
+                  heads=[self.head(100.0, 280.0)]),
+            Event(x=120.0, denom=4, dots=0, is_rest=False,
+                  heads=[self.head(120.0, second_y)]),
+        ]
+        _carry_ties([first, second], events, curves, self.GAP)
+        return second
+
+    def test_carries_the_chord_across_a_tie(self):
+        beat = self.run_case(280.0, [self.curve(112.0, 282.0)])
+        self.assertTrue(beat.tied)
+        self.assertEqual([str(n) for n in beat.notes], ["2현14"])
+
+    def test_needs_the_curve(self):
+        # 높이가 같아도 이음줄이 없으면 타이가 아니다
+        beat = self.run_case(280.0, [])
+        self.assertFalse(beat.tied)
+        self.assertEqual(beat.notes, [])
+
+    def test_needs_the_same_pitch(self):
+        # 곡선이 있어도 높이가 다르면 붙임줄(slur)이지 타이가 아니다
+        beat = self.run_case(288.0, [self.curve(112.0, 284.0)])
+        self.assertFalse(beat.tied)
+        self.assertEqual(beat.notes, [])
 
 
 if __name__ == "__main__":

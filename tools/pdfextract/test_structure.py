@@ -66,6 +66,17 @@ class MergeDigits(unittest.TestCase):
     def test_reads_dead_notes(self):
         self.assertEqual(read([digit("X", 100.0, 5)]), [("X", 5)])
 
+    def test_reads_a_dead_note_drawn_as_a_music_glyph(self):
+        # Finale은 TAB의 데드 노트를 글자 X가 아니라 Maestro의 × 글리프로
+        # 찍는다. 글자만 보면 그 음이 통째로 사라져서, 오선보에는 있는데
+        # 짚는 자리가 없는 소리가 된다 — 달빛소년에서 100개가 그랬다.
+        cy = TAB.top + TAB.gap * 2
+        cross = Glyph(
+            code=0xF0C0, char="", font="ABCDEF+Maestro",
+            x=100.0, y=cy, x0=100.0, y0=cy - 2.5, x1=104.0, y1=cy + 2.5,
+        )
+        self.assertEqual(read([cross]), [("X", 3)])
+
 
 class BassTab(unittest.TestCase):
     """4줄 TAB(베이스). 6줄 TAB의 아래 네 줄과 모양이 같아 헷갈리기 쉽다."""

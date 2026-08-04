@@ -15,7 +15,8 @@ from fractions import Fraction
 from annotations import RANGE_KINDS, Annotation, collect, range_end
 from dump import bar_edges, group_chords
 from rhythm import BEND_ARROW, Event, apply_tuplets, extract_events
-from structure import FretMark, Staff, TrackStaff, detect_barlines, extract_frets
+from structure import (TIE_FONT, FretMark, Staff, TrackStaff, detect_barlines,
+                       extract_frets)
 
 
 def _page_texts(glyphs):
@@ -106,6 +107,8 @@ class Beat:
     stem_up: bool | None = None
     # 잇단음표 비율 (셋잇단음표면 2/3 — 적힌 셋이 둘 길이만큼 간다)
     ratio: Fraction = Fraction(1)
+    # 앞 소리에서 타이로 이어진 음. 다시 튕기지 않고 소리를 잇는다.
+    tied: bool = False
 
     def has(self, kind: str) -> bool:
         return any(k == kind for k, _ in self.marks)
@@ -237,6 +240,7 @@ def merge_bar(
     glyphs=None,
     lo: float = 0.0,
     hi: float = 0.0,
+    gap: float = 0.0,
 ) -> tuple[list[Beat], int]:
     """한 마디 안에서 음길이와 프렛을 짝짓는다.
 
@@ -271,9 +275,54 @@ def merge_bar(
         beats.append(beat)
 
     if glyphs is not None:
+        _carry_ties(beats, events, glyphs, gap)
         beats = _merge_bend_orphans(beats, events, glyphs, lo, hi)
 
     return beats, len(columns) - len(used)
+
+
+def _carry_ties(beats: list[Beat], events: list[Event], glyphs, gap: float) -> None:
+    """타이로 이어진 음에 앞 화음을 물려준다.
+
+    타이로 이어진 음은 TAB에 숫자를 다시 적지 않는다. 그대로 두면 짚는
+    자리가 없어 재생할 때 소리가 뚝 끊긴다 — 광인들에서 122개가 그랬다.
+
+    근거는 세 가지를 모두 만족할 때만 인정한다.
+
+    - 짚는 자리를 못 찾았다 (숫자가 없다)
+    - 앞 소리와 **음 높이가 같다** (타이는 같은 음끼리만 잇는다)
+    - 둘 사이에 **이음줄 곡선이 그려져 있다** (`structure._tie_curves`)
+
+    셋 다 봐야 하는 이유는, 앞 둘만으로는 이음줄과 붙임줄(slur)을 못
+    가리고 진짜로 못 읽은 프렛까지 앞 음으로 덮어쓰기 때문이다.
+    """
+    curves = [g for g in glyphs if g.font == TIE_FONT]
+    if not curves or gap <= 0:
+        return
+
+    prev: tuple[Beat, Event] | None = None
+    for beat, event in zip(beats, events):
+        if event.is_rest:
+            continue
+        if beat.notes:
+            prev = (beat, event)
+            continue
+        if prev is None or not event.heads:
+            continue
+        pbeat, pevent = prev
+        ys = sorted(round(h.y, 1) for h in event.heads)
+        if ys != sorted(round(h.y, 1) for h in pevent.heads):
+            continue
+        reach = max(event.heads[0].x1 - event.heads[0].x0, gap)
+        joined = any(
+            pevent.x < c.x < event.x + reach
+            and any(abs(c.y - y) < gap * 1.6 for y in ys)
+            for c in curves
+        )
+        if joined:
+            beat.notes = list(pbeat.notes)
+            beat.tied = True
+            prev = (beat, event)
 
 
 def carry_slash_chords(bars: list[Bar]) -> None:
@@ -345,7 +394,9 @@ def extract_bars(
             floor_y=track.tab.top if track.tab else None,
         )
         columns = group_chords([m for m in frets if lo < m.x < hi])
-        beats, left = merge_bar(events, columns, tolerance, glyphs, lo, hi)
+        beats, left = merge_bar(
+            events, columns, tolerance, glyphs, lo, hi, track.score.gap
+        )
         orphans += left
         attach_marks(
             beats,

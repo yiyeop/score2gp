@@ -194,7 +194,55 @@ def read_page(page: fitz.Page, rest_shapes: dict[str, int] | None = None):
     if not any(g.is_music for g in glyphs):
         glyphs += _glyphs_from_shapes(page, h_segments, rest_shapes, v_lines)
 
+    glyphs += _tie_curves(page, h_segments)
+
     return h_segments, v_lines, beams, glyphs
+
+
+# 타이(이음줄)는 글리프가 아니라 그림이라 글자로는 안 잡힌다. 하지만
+# 뒤 단계가 글리프 목록만 받으므로, 가짜 글리프로 만들어 함께 넘긴다.
+# 음악 폰트가 아니고 글자도 비어 있어서 다른 처리에는 걸리지 않는다.
+TIE_FONT = "ties"
+
+
+def _tie_curves(page: fitz.Page, h_segments) -> list[Glyph]:
+    """이음줄로 보이는 초승달 곡선을 찾는다.
+
+    타이는 **베지어 두 개**로만 이뤄진 채워진 초승달이다(바깥 곡선과
+    안쪽 곡선). 음표머리는 네 개라서 조각 수만으로 갈린다. 실측하면
+    오선 간격 기준 1.9~3.2 × 1.0 정도다.
+
+    이걸 찾아야 하는 이유는, 타이로 이어진 음은 TAB에 숫자를 다시
+    적지 않기 때문이다. 그대로 두면 짚는 자리가 없는 소리가 되어
+    재생할 때 **아예 안 들린다**.
+    """
+    staves = detect_staves(h_segments, page.rect.width)
+    if not staves:
+        return []
+    gaps = sorted(s.gap for s in staves)
+    gap = gaps[len(gaps) // 2]
+    if gap <= 0:
+        return []
+
+    out: list[Glyph] = []
+    for d in page.get_drawings():
+        if d["type"] not in ("f", "fs"):
+            continue
+        items = d["items"]
+        if len(items) != 2 or {i[0] for i in items} != {"c"}:
+            continue
+        r = d["rect"]
+        w, h = r.width / gap, r.height / gap
+        if not (0.8 <= w <= 7.0 and 0.3 <= h <= 2.0):
+            continue
+        out.append(
+            Glyph(
+                code=0, char="", font=TIE_FONT,
+                x=(r.x0 + r.x1) / 2, y=(r.y0 + r.y1) / 2,
+                x0=r.x0, y0=r.y0, x1=r.x1, y1=r.y1,
+            )
+        )
+    return out
 
 
 # 오선 간격을 1로 봤을 때 도형의 크기. 실측(쏜애플 - 아지랑이)에서
@@ -443,11 +491,19 @@ def extract_frets(tab: Staff, glyphs: list[Glyph]) -> list[FretMark]:
 
     cand = []
     for g in glyphs:
-        if g.is_music:
+        prof = g.profile
+        if prof is not None and g.code in prof.heads_dead:
+            # 데드 노트를 글자 X가 아니라 음악 폰트의 × 글리프로 찍는
+            # 악보가 있다(Finale/Maestro). 글자만 보면 그 음이 통째로
+            # 사라져서, 오선보에는 있는데 짚는 자리가 없는 소리가 된다 —
+            # 달빛소년에서 100개, ONCE에서 68개가 그랬다.
+            t = "X"
+        elif g.is_music:
             continue
-        t = g.char.strip()
-        if not (t.isdigit() or t.upper() == "X"):
-            continue
+        else:
+            t = g.char.strip()
+            if not (t.isdigit() or t.upper() == "X"):
+                continue
         cy = (g.y0 + g.y1) / 2
         if tab.top - span <= cy <= tab.bottom + span:
             cand.append((cy, g, t))

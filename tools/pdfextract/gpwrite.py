@@ -224,6 +224,11 @@ def _fill_voice(
                 if n.dead:
                     note.value = 0
                     note.type = gp.models.NoteType.dead
+                elif b.tied:
+                    # 타이로 이어진 음은 다시 튕기지 않는다. 프렛은 앞 음에서
+                    # 물려받은 값 그대로 적어야 GP가 어느 음이 이어지는지 안다.
+                    note.value = n.fret
+                    note.type = gp.models.NoteType.tie
                 else:
                     note.value = n.fret
                     note.type = gp.models.NoteType.normal
