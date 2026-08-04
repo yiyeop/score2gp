@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAlphaTab } from "./player/useAlphaTab";
+import { usePracticeSettingsPersistence } from "./player/usePracticeSettingsPersistence";
 import { useShortcuts } from "./shortcuts/useShortcuts";
 import { APP_MODES, type AppModeId } from "./modes/registry";
 import { READ_SHORTCUT_DOCS, buildReadShortcuts } from "./modes/read/readShortcuts";
@@ -92,6 +93,8 @@ function App() {
   const [reusedNotice, setReusedNotice] = useState(false);
 
   const editor = useScoreEditor(player);
+  // 속도·조옮김·볼륨·탭 전용 보기를 파일(곡) 단위로 저장/복원한다 (T-8).
+  usePracticeSettingsPersistence(player, fileName);
 
   useShortcuts(
     buildReadShortcuts(player, () => setHelpOpen((v) => !v)),

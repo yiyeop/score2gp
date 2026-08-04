@@ -102,7 +102,7 @@ export function useAlphaTab() {
   const [barLoopRange, setBarLoopRangeState] = useState<BarRange | null>(null);
   const [metronomeOn, setMetronomeOn] = useState(false);
   const [countInOn, setCountInOn] = useState(false);
-  const [tabOnly, setTabOnly] = useState(false);
+  const [tabOnly, setTabOnlyState] = useState(false);
   const [visibleTracks, setVisibleTracks] = useState<number[]>([0]);
   const [hover, setHover] = useState<TechniqueHover | null>(null);
   // 주법 안내(사이드바 목록 + 악보 툴팁) 전체 on/off. 기본은 켜짐.
@@ -626,17 +626,21 @@ export function useAlphaTab() {
     if (!next) setHover(null);
   }, [techniqueGuide]);
 
-  const toggleTabOnly = useCallback(() => {
+  /** 탭 전용 보기를 켜거나 끈다(값을 직접 지정). 저장된 연습 설정을 복원할 때도 쓴다. */
+  const setTabOnly = useCallback((next: boolean) => {
     const api = apiRef.current;
     if (!api) return;
-    const next = !tabOnly;
     api.settings.display.staveProfile = next
       ? alphaTab.StaveProfile.Tab
       : alphaTab.StaveProfile.Default;
     api.updateSettings();
     api.render();
-    setTabOnly(next);
-  }, [tabOnly]);
+    setTabOnlyState(next);
+  }, []);
+
+  const toggleTabOnly = useCallback(() => {
+    setTabOnly(!tabOnly);
+  }, [tabOnly, setTabOnly]);
 
   const setTrackVolume = useCallback((trackIndex: number, volume: number) => {
     const api = apiRef.current;
@@ -732,6 +736,7 @@ export function useAlphaTab() {
     clearBarLoopRange,
     toggleMetronome,
     toggleCountIn,
+    setTabOnly,
     toggleTabOnly,
     toggleTechniqueGuide,
     showTracks,
