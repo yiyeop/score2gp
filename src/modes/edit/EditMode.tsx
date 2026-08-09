@@ -13,14 +13,32 @@ import { DURATIONS, FRET_MAX, type ScoreEditor } from "./useScoreEditor";
 export function EditModeSidebar({
   player,
   editor,
+  showHint,
+  onDismissHint,
 }: {
   player: PlayerHandle;
   editor: ScoreEditor;
+  /** 고치기 모드가 "보정 전용 도구"라는 첫 진입 안내를 보여줄지. */
+  showHint: boolean;
+  onDismissHint: () => void;
 }) {
+  // 어느 하위 상태(빈 악보/음 미선택/음 선택)에서도 똑같이 보여준다.
+  const hint = showHint ? (
+    <button
+      type="button"
+      className="edit-panel__what"
+      onClick={onDismissHint}
+      title="누르면 닫혀요"
+    >
+      PDF 변환이 놓친 부분만 고치는 도구예요
+    </button>
+  ) : null;
+
   if (!player.score) {
     return (
       <aside className="sidebar track-list--empty">
         <h2 className="panel-title">고치기</h2>
+        {hint}
         <p>악보를 열면 여기서 고칠 수 있어요.</p>
       </aside>
     );
@@ -32,6 +50,7 @@ export function EditModeSidebar({
     return (
       <aside className="sidebar track-list--empty">
         <h2 className="panel-title">고치기</h2>
+        {hint}
         <p>
           악보에서 고칠 음을 눌러보세요.
           <br />
@@ -46,6 +65,7 @@ export function EditModeSidebar({
   return (
     <aside className="sidebar edit-panel">
       <h2 className="panel-title">고치기</h2>
+      {hint}
 
       {note ? (
         <>

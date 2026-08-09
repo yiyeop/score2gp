@@ -89,6 +89,12 @@ button.primary {
   background: var(--accent);
   color: #fff;
 }
+/* "고치기"처럼 보정 전용 도구인 모드는 읽기 모드보다 낮은 무게로 보여준다. */
+.mode-tab--secondary.mode-tab--active {
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+}
 .header__title {
   flex: 1;
   text-align: center;
@@ -811,11 +817,15 @@ kbd {
 }
 
 /* ── 편집 모드 ─────────────────────── */
+/* 고치기 모드 최초 진입 안내. 누르면 닫힌다(edit-panel__what). */
 .edit-panel__what {
+  display: block;
+  width: 100%;
   margin: 0 0 16px;
   padding: 10px 12px;
   font-size: 13px;
   line-height: 1.6;
+  text-align: left;
   background: var(--accent-soft);
   border: 1px solid var(--accent);
   border-radius: 8px;

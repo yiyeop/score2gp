@@ -91,6 +91,9 @@ function App() {
   const [saved, setSaved] = useState(false);
   // 전에 바꿔 둔 결과를 그대로 열었을 때만 잠깐 알린다.
   const [reusedNotice, setReusedNotice] = useState(false);
+  // 고치기 모드가 "보정 전용 도구"라는 안내. 세션당 한 번만 보여주고,
+  // 닫으면(또는 최초 진입 후 확인하면) 다시 모드를 오가도 다시 뜨지 않는다.
+  const [editHintDismissed, setEditHintDismissed] = useState(false);
 
   const editor = useScoreEditor(player);
   // 속도·조옮김·볼륨·탭 전용 보기를 파일(곡) 단위로 저장/복원한다 (T-8).
@@ -167,7 +170,9 @@ function App() {
             <button
               key={m.id}
               type="button"
-              className={`mode-tab${mode === m.id ? " mode-tab--active" : ""}`}
+              className={`mode-tab${
+                m.tone === "secondary" ? " mode-tab--secondary" : ""
+              }${mode === m.id ? " mode-tab--active" : ""}`}
               onClick={() => setMode(m.id)}
             >
               {m.label}
@@ -205,7 +210,12 @@ function App() {
         {mode === "read" ? (
           <ReadSidebar player={player} />
         ) : (
-          <EditModeSidebar player={player} editor={editor} />
+          <EditModeSidebar
+            player={player}
+            editor={editor}
+            showHint={!editHintDismissed}
+            onDismissHint={() => setEditHintDismissed(true)}
+          />
         )}
 
         <main className="score-viewport" ref={player.viewportRef}>
