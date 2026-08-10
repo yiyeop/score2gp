@@ -1,11 +1,11 @@
-import { useState } from "react";
-import { Check, TriangleAlert } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Check, EllipsisVertical, TriangleAlert } from "lucide-react";
 import { useAlphaTab } from "./player/useAlphaTab";
 import { usePracticeSettingsPersistence } from "./player/usePracticeSettingsPersistence";
 import { useShortcuts } from "./shortcuts/useShortcuts";
 import { APP_MODES, type AppModeId } from "./modes/registry";
 import { READ_SHORTCUT_DOCS, buildReadShortcuts } from "./modes/read/readShortcuts";
-import { ReadSidebar } from "./modes/read/ReadSidebar";
+import { ReadSidebar, type MobileSheetTab } from "./modes/read/ReadSidebar";
 import { TransportBar } from "./modes/read/TransportBar";
 import { Timeline } from "./modes/read/Timeline";
 import { TechniqueTooltip } from "./modes/read/TechniqueTooltip";
@@ -84,6 +84,132 @@ function ExportMenu({
   );
 }
 
+/**
+ * 헤더 케밥(⋯) 메뉴 — 모바일 전용(<640px, CSS로만 노출 전환).
+ *
+ * `header__actions`의 네 버튼을 세로 목록으로 옮긴 것으로, `ExportMenu`가
+ * 이미 구현한 열림/백드롭/목록 패턴을 그대로 재사용한다(T-11 "새 드롭다운/
+ * 오버레이 컴포넌트를 발명하지 않는다"). 악보가 없으면(`!player.score`)
+ * 렌더링하지 않는다 — 그 상태에서는 `.empty-state__actions`가 이미 같은
+ * 액션을 본문 중앙에 제공한다.
+ */
+function HeaderMenu({
+  hasScore,
+  hasConverted,
+  saved,
+  converting,
+  onDemo,
+  onConvert,
+  onOpen,
+  onExport,
+}: {
+  hasScore: boolean;
+  hasConverted: boolean;
+  saved: boolean;
+  converting: boolean;
+  onDemo: () => void;
+  onConvert: () => void;
+  onOpen: () => void;
+  onExport: (id: ExportFormatId) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const formats = EXPORT_FORMATS.filter((f) => !f.convertedOnly || hasConverted);
+
+  if (!hasScore) return null;
+
+  const close = () => {
+    setOpen(false);
+    setExportOpen(false);
+  };
+
+  return (
+    <div className="header-menu">
+      <button
+        type="button"
+        className="header-menu__trigger"
+        onClick={() => setOpen((v) => !v)}
+        title="더보기"
+        aria-label="더보기"
+      >
+        <EllipsisVertical size={20} strokeWidth={1.75} />
+      </button>
+      {open && (
+        <>
+          <div className="export__backdrop" onClick={close} />
+          <ul className="export__menu header-menu__list">
+            <li>
+              <button
+                type="button"
+                onClick={() => {
+                  close();
+                  onDemo();
+                }}
+              >
+                데모 곡 열기
+              </button>
+            </li>
+            {isTauri() && (
+              <li>
+                <button
+                  type="button"
+                  onClick={() => {
+                    close();
+                    onConvert();
+                  }}
+                  disabled={converting}
+                >
+                  {converting ? "변환 중…" : "PDF 변환하기"}
+                </button>
+              </li>
+            )}
+            {isTauri() && (
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setExportOpen((v) => !v)}
+                  aria-expanded={exportOpen}
+                >
+                  다른 형식으로 내보내기{saved ? " (내보냄 완료)" : ""} ▸
+                </button>
+                {exportOpen && (
+                  <ul className="header-menu__submenu">
+                    {formats.map((f) => (
+                      <li key={f.id}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            close();
+                            onExport(f.id);
+                          }}
+                        >
+                          <span className="export__label">{f.label}</span>
+                          <span className="export__hint">{f.hint}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            )}
+            <li>
+              <button
+                type="button"
+                onClick={() => {
+                  close();
+                  onOpen();
+                }}
+              >
+                악보 파일 열기
+              </button>
+            </li>
+          </ul>
+        </>
+      )}
+    </div>
+  );
+}
+
 function App() {
   // 악보 뷰(alphaTab)는 모드와 무관하게 App이 소유한다.
   // 모드 전환 시에도 로드된 악보와 재생 상태가 유지된다.
@@ -101,6 +227,26 @@ function App() {
   // 고치기 모드가 "보정 전용 도구"라는 안내. 세션당 한 번만 보여주고,
   // 닫으면(또는 최초 진입 후 확인하면) 다시 모드를 오가도 다시 뜨지 않는다.
   const [editHintDismissed, setEditHintDismissed] = useState(false);
+  // 좁은 화면에서 고치기가 정밀 조작에 불리하다는 안내(모바일 전용).
+  // 위 editHintDismissed와 같은 "세션당 한 번" 패턴이라 App에 함께 둔다.
+  const [mobileEditBannerDismissed, setMobileEditBannerDismissed] = useState(false);
+
+  // 모바일(<640px) 하단 시트/트랜스포트 tier 2 — 동시에 하나만 열린다는
+  // 규칙(T-11)을 지키려면 두 영역을 아우르는 단일 상태가 필요하다.
+  // 데스크톱에서는 이 상태가 아무 CSS에도 영향을 주지 않는다(전부 모바일
+  // 미디어쿼리 안에서만 쓰인다).
+  const [mobilePanel, setMobilePanel] = useState<
+    { kind: "sheet"; tab: MobileSheetTab | "edit" } | { kind: "tier2" } | null
+  >(null);
+  const closeMobilePanel = () => setMobilePanel(null);
+  const toggleMobileTier2 = () =>
+    setMobilePanel((p) => (p?.kind === "tier2" ? null : { kind: "tier2" }));
+  const toggleMobileSheetTab = (tab: MobileSheetTab | "edit") =>
+    setMobilePanel((p) =>
+      p?.kind === "sheet" && p.tab === tab ? null : { kind: "sheet", tab },
+    );
+  // 모드를 바꾸면 이전 모드가 열어 둔 시트/tier2는 의미가 없으므로 접는다.
+  useEffect(() => setMobilePanel(null), [mode]);
 
   // 내보낸 뒤 고치기 모드에서 실제로 뭔가 바뀌면(되돌리기/다시하기 포함)
   // "내보냄 ✓" 표시가 최신 상태를 가리키지 않으므로 되돌린다.
@@ -204,11 +350,11 @@ function App() {
             </button>
           ))}
         </nav>
-        <div className="header__title">
-          {player.score && (
+        {player.score && (
+          <div className="header__title">
             <span title={fileName ?? undefined}>{player.scoreTitle}</span>
-          )}
-        </div>
+          </div>
+        )}
         <div className="header__actions">
           <button type="button" onClick={handleDemo}>
             데모 곡
@@ -229,21 +375,47 @@ function App() {
             악보 열기
           </button>
         </div>
+        <HeaderMenu
+          hasScore={!!player.score}
+          hasConverted={converted !== null}
+          saved={saved}
+          converting={converting}
+          onDemo={handleDemo}
+          onConvert={handleConvert}
+          onOpen={handleOpen}
+          onExport={handleExport}
+        />
       </header>
 
       <div className="app-body">
         {mode === "read" ? (
-          <ReadSidebar player={player} />
+          <ReadSidebar
+            player={player}
+            mobileTab={
+              mobilePanel?.kind === "sheet" && mobilePanel.tab !== "edit"
+                ? mobilePanel.tab
+                : null
+            }
+            onMobileTabChange={toggleMobileSheetTab}
+          />
         ) : (
           <EditModeSidebar
             player={player}
             editor={editor}
             showHint={!editHintDismissed}
             onDismissHint={() => setEditHintDismissed(true)}
+            mobileOpen={mobilePanel?.kind === "sheet" && mobilePanel.tab === "edit"}
+            onMobileToggle={() => toggleMobileSheetTab("edit")}
+            showMobileNarrowBanner={!mobileEditBannerDismissed}
+            onDismissMobileNarrowBanner={() => setMobileEditBannerDismissed(true)}
           />
         )}
 
-        <main className="score-viewport" ref={player.viewportRef}>
+        <main
+          className="score-viewport"
+          ref={player.viewportRef}
+          onClick={mobilePanel ? closeMobilePanel : undefined}
+        >
           <div className="score-surface" ref={player.containerRef} />
           {!player.score && !player.isLoading && (
             <div className="empty-state">
@@ -306,10 +478,20 @@ function App() {
       {mode === "read" ? (
         <>
           <Timeline player={player} />
-          <TransportBar player={player} onToggleHelp={() => setHelpOpen(true)} />
+          <TransportBar
+            player={player}
+            onToggleHelp={() => setHelpOpen(true)}
+            mobileTier2Open={mobilePanel?.kind === "tier2"}
+            onToggleMobileTier2={toggleMobileTier2}
+          />
         </>
       ) : (
-        <EditModeBar player={player} editor={editor} />
+        <EditModeBar
+          player={player}
+          editor={editor}
+          mobileTier2Open={mobilePanel?.kind === "tier2"}
+          onToggleMobileTier2={toggleMobileTier2}
+        />
       )}
 
       {mode === "read" && <TechniqueTooltip player={player} />}

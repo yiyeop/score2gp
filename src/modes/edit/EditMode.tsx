@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import type { PlayerHandle } from "../../player/useAlphaTab";
 import { TONE_CHOICES } from "../../lib/markers";
 import { DURATIONS, FRET_MAX, type ScoreEditor } from "./useScoreEditor";
@@ -15,12 +17,22 @@ export function EditModeSidebar({
   editor,
   showHint,
   onDismissHint,
+  mobileOpen,
+  onMobileToggle,
+  showMobileNarrowBanner,
+  onDismissMobileNarrowBanner,
 }: {
   player: PlayerHandle;
   editor: ScoreEditor;
   /** 고치기 모드가 "보정 전용 도구"라는 첫 진입 안내를 보여줄지. */
   showHint: boolean;
   onDismissHint: () => void;
+  /** 모바일 하단 시트가 펼쳐져 있는지 (읽기 모드의 sidebar tab 하나에 해당). */
+  mobileOpen: boolean;
+  onMobileToggle: () => void;
+  /** 좁은 화면에서 고치기가 정밀 조작에 불리하다는 안내를 보여줄지(세션당 1회). */
+  showMobileNarrowBanner: boolean;
+  onDismissMobileNarrowBanner: () => void;
 }) {
   // 어느 하위 상태(빈 악보/음 미선택/음 선택)에서도 똑같이 보여준다.
   const hint = showHint ? (
@@ -34,12 +46,54 @@ export function EditModeSidebar({
     </button>
   ) : null;
 
+  // 모바일 전용 — 데스크톱에서는 CSS로 항상 숨김. 화면이 좁으면 정밀
+  // 조작이 어렵다는 걸 막지 않고 안내만 한다(T-11 "고치기 모드는 어떻게
+  // 되나" 참고).
+  const mobileNarrowBanner = showMobileNarrowBanner ? (
+    <button
+      type="button"
+      className="edit-mobile-banner"
+      onClick={onDismissMobileNarrowBanner}
+      title="누르면 닫혀요"
+    >
+      고치기는 화면이 좁으면 정밀하게 조작하기 어려워요 — 큰 화면에서 이용을
+      권장해요
+    </button>
+  ) : null;
+
+  const tabbar = (
+    <div className="sidebar__tabbar">
+      <button
+        type="button"
+        className={`sidebar__tab${mobileOpen ? " sidebar__tab--active" : ""}`}
+        onClick={onMobileToggle}
+      >
+        고치기
+      </button>
+    </div>
+  );
+
+  const wrapSheet = (body: ReactNode) => (
+    <>
+      {mobileNarrowBanner}
+      {tabbar}
+      <div className={`sidebar__sheet${mobileOpen ? " sidebar__sheet--open" : ""}`}>
+        <div className="sidebar__grabber" aria-hidden="true" />
+        <div className="sidebar__sheet-body">{body}</div>
+      </div>
+    </>
+  );
+
   if (!player.score) {
     return (
       <aside className="sidebar track-list--empty">
-        <h2 className="panel-title">고치기</h2>
-        {hint}
-        <p>악보를 열면 여기서 고칠 수 있어요.</p>
+        {wrapSheet(
+          <>
+            <h2 className="panel-title">고치기</h2>
+            {hint}
+            <p>악보를 열면 여기서 고칠 수 있어요.</p>
+          </>,
+        )}
       </aside>
     );
   }
@@ -49,21 +103,27 @@ export function EditModeSidebar({
   if (!beat) {
     return (
       <aside className="sidebar track-list--empty">
-        <h2 className="panel-title">고치기</h2>
-        {hint}
-        <p>
-          악보에서 고칠 음을 눌러보세요.
-          <br />
-          <br />
-          PDF를 바꾼 악보라면 잘못 읽힌 음이 있을 수 있어요. 그런 자리를 여기서
-          바로잡을 수 있습니다.
-        </p>
+        {wrapSheet(
+          <>
+            <h2 className="panel-title">고치기</h2>
+            {hint}
+            <p>
+              악보에서 고칠 음을 눌러보세요.
+              <br />
+              <br />
+              PDF를 바꾼 악보라면 잘못 읽힌 음이 있을 수 있어요. 그런 자리를
+              여기서 바로잡을 수 있습니다.
+            </p>
+          </>,
+        )}
       </aside>
     );
   }
 
   return (
     <aside className="sidebar edit-panel">
+      {wrapSheet(
+        <>
       <h2 className="panel-title">고치기</h2>
       {hint}
 
@@ -194,22 +254,35 @@ export function EditModeSidebar({
           </button>
         </section>
       )}
+        </>,
+      )}
     </aside>
   );
 }
 
-/** 편집 모드 하단 바 — 이동, 되돌리기, 그리고 소리로 확인하기. */
+/**
+ * 편집 모드 하단 바 — 이동, 되돌리기, 그리고 소리로 확인하기.
+ *
+ * 읽기 모드 `TransportBar`와 같은 tier1/tier2 경계를 그대로 적용한다(T-11)
+ * — 재생/정지 + 스텝 이동이 tier1(상시 노출), 되돌리기/다시하기/상태
+ * 텍스트가 tier2(모바일에서 접힘).
+ */
 export function EditModeBar({
   player,
   editor,
+  mobileTier2Open,
+  onToggleMobileTier2,
 }: {
   player: PlayerHandle;
   editor: ScoreEditor;
+  mobileTier2Open: boolean;
+  onToggleMobileTier2: () => void;
 }) {
   const disabled = !player.score;
 
   return (
     <footer className="transport">
+      <div className="transport__tier1">
       <div className="transport__group">
         <button
           type="button"
@@ -253,6 +326,24 @@ export function EditModeBar({
         </button>
       </div>
 
+        <button
+          type="button"
+          className="transport__tier2-toggle"
+          onClick={onToggleMobileTier2}
+          aria-expanded={mobileTier2Open}
+          title="되돌리기·다시하기 등 더 보기"
+        >
+          {mobileTier2Open ? (
+            <ChevronDown size={16} strokeWidth={1.75} />
+          ) : (
+            <ChevronUp size={16} strokeWidth={1.75} />
+          )}
+        </button>
+      </div>
+
+      <div
+        className={`transport__tier2${mobileTier2Open ? " transport__tier2--open" : ""}`}
+      >
       <div className="transport__group">
         <button
           type="button"
@@ -277,6 +368,7 @@ export function EditModeBar({
           ? `방금: ${editor.lastChange}`
           : "악보에서 음을 눌러 고르세요"}
       </span>
+      </div>
     </footer>
   );
 }

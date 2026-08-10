@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ListMusic, Metronome, Repeat, Timer } from "lucide-react";
+import { ChevronDown, ChevronUp, ListMusic, Metronome, Repeat, Timer } from "lucide-react";
 import type { PlayerHandle } from "../../player/useAlphaTab";
 import {
   SPEED_MAX,
@@ -61,179 +61,213 @@ function BpmControl({ player }: { player: PlayerHandle }) {
   );
 }
 
-/** 하단 재생 컨트롤 바 (읽기 모드) */
+/**
+ * 하단 재생 컨트롤 바 (읽기 모드).
+ *
+ * 데스크톱(≥640px)에서는 `transport__tier1`/`transport__tier2` 두 래퍼가
+ * `display: contents`로 사라져서 기존처럼 한 행에 모든 그룹이 나란히
+ * 놓인다. 모바일(<640px)에서는 CSS가 이 두 래퍼를 실제 2단으로 분리한다
+ * — tier1(재생·정지·마디이동)은 화면 최하단에 항상 고정, tier2(속도·BPM·
+ * 조옮김·볼륨·토글·도움말)는 `mobileTier2Open`일 때만 그 위로 펼쳐진다
+ * (T-11). 열림 상태는 사이드바 시트와 "동시에 하나만" 규칙을 지켜야 해서
+ * 상위(`App.tsx`)가 소유한다.
+ */
 export function TransportBar({
   player,
   onToggleHelp,
+  mobileTier2Open,
+  onToggleMobileTier2,
 }: {
   player: PlayerHandle;
   onToggleHelp: () => void;
+  mobileTier2Open: boolean;
+  onToggleMobileTier2: () => void;
 }) {
   const disabled = !player.score;
 
   return (
     <footer className="transport">
-      <div className="transport__group">
-        <button
-          type="button"
-          className="transport__play"
-          onClick={player.playPause}
-          disabled={disabled}
-          title="재생/일시정지 (Space)"
-        >
-          {player.isPlaying ? "⏸" : "▶"}
-        </button>
-        <button
-          type="button"
-          className="transport__stop"
-          onClick={player.stop}
-          disabled={disabled}
-          title="정지 (Esc)"
-        >
-          ⏹
-        </button>
-      </div>
+      <div className="transport__tier1">
+        <div className="transport__group">
+          <button
+            type="button"
+            className="transport__play"
+            onClick={player.playPause}
+            disabled={disabled}
+            title="재생/일시정지 (Space)"
+          >
+            {player.isPlaying ? "⏸" : "▶"}
+          </button>
+          <button
+            type="button"
+            className="transport__stop"
+            onClick={player.stop}
+            disabled={disabled}
+            title="정지 (Esc)"
+          >
+            ⏹
+          </button>
+        </div>
 
-      <div className="transport__group transport__bars">
-        <button
-          type="button"
-          onClick={() => player.seekBars(-1)}
-          disabled={disabled}
-          title="이전 마디 (←)"
-        >
-          ◀
-        </button>
-        <span className="transport__bar-label">
-          마디 {player.barCount === 0 ? 0 : player.currentBar + 1} /{" "}
-          {player.barCount}
-        </span>
-        <button
-          type="button"
-          onClick={() => player.seekBars(1)}
-          disabled={disabled}
-          title="다음 마디 (→)"
-        >
-          ▶
-        </button>
-      </div>
+        <div className="transport__group transport__bars">
+          <button
+            type="button"
+            onClick={() => player.seekBars(-1)}
+            disabled={disabled}
+            title="이전 마디 (←)"
+          >
+            ◀
+          </button>
+          <span className="transport__bar-label">
+            마디 {player.barCount === 0 ? 0 : player.currentBar + 1} /{" "}
+            {player.barCount}
+          </span>
+          <button
+            type="button"
+            onClick={() => player.seekBars(1)}
+            disabled={disabled}
+            title="다음 마디 (→)"
+          >
+            ▶
+          </button>
+        </div>
 
-      <label className="transport__group">
-        <span className="control-label">속도</span>
-        <select
-          value={String(player.speed)}
-          disabled={disabled}
-          onChange={(e) => player.setSpeed(Number(e.target.value))}
-          title="재생 속도 (+/-)"
+        <button
+          type="button"
+          className="transport__tier2-toggle"
+          onClick={onToggleMobileTier2}
+          aria-expanded={mobileTier2Open}
+          title="속도·BPM·조옮김·볼륨 등 더 보기"
         >
-          {!SPEED_PRESETS.includes(player.speed) && (
-            <option value={String(player.speed)}>
-              {Math.round(player.speed * 100)}%
-            </option>
+          {mobileTier2Open ? (
+            <ChevronDown size={16} strokeWidth={1.75} />
+          ) : (
+            <ChevronUp size={16} strokeWidth={1.75} />
           )}
-          {SPEED_PRESETS.map((s) => (
-            <option key={s} value={String(s)}>
-              {Math.round(s * 100)}%
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <BpmControl player={player} />
-
-      <div className="transport__group">
-        <span className="control-label">조옮김</span>
-        <button
-          type="button"
-          onClick={() => player.setTranspose(player.transpose - 1)}
-          disabled={disabled || player.transpose <= TRANSPOSE_MIN}
-          title="반음 내리기 ([)"
-        >
-          −
-        </button>
-        <button
-          type="button"
-          className="transport__transpose-value"
-          onClick={() => player.setTranspose(0)}
-          disabled={disabled}
-          title="클릭하면 원래 조로 되돌립니다"
-        >
-          {player.transpose > 0 ? `+${player.transpose}` : player.transpose}
-        </button>
-        <button
-          type="button"
-          onClick={() => player.setTranspose(player.transpose + 1)}
-          disabled={disabled || player.transpose >= TRANSPOSE_MAX}
-          title="반음 올리기 (])"
-        >
-          +
         </button>
       </div>
 
-      <label className="transport__group transport__volume">
-        <span className="control-label">볼륨</span>
-        <input
-          type="range"
-          min={0}
-          max={1}
-          step={0.05}
-          value={player.masterVolume}
-          onChange={(e) => player.setMasterVolume(Number(e.target.value))}
-          onPointerUp={(e) => (e.target as HTMLElement).blur()}
-          title="전체 볼륨 (↑/↓)"
-        />
-      </label>
-
-      <div className="transport__group transport__toggles">
-        <button
-          type="button"
-          className={`chip${player.isLooping ? " chip--active" : ""}`}
-          onClick={player.toggleLoop}
-          disabled={disabled}
-          title={
-            player.barLoopRange
-              ? "곡 전체 반복 (L) — 지금은 타임라인에 지정한 구간 반복이 우선 적용 중이에요"
-              : "곡 전체 반복 (L)"
-          }
-        >
-          <Repeat size={16} strokeWidth={1.75} /> 반복
-        </button>
-        <button
-          type="button"
-          className={`chip${player.metronomeOn ? " chip--active" : ""}`}
-          onClick={player.toggleMetronome}
-          disabled={disabled}
-          title="메트로놈 (M)"
-        >
-          <Metronome size={16} strokeWidth={1.75} /> 메트로놈
-        </button>
-        <button
-          type="button"
-          className={`chip${player.countInOn ? " chip--active" : ""}`}
-          onClick={player.toggleCountIn}
-          disabled={disabled}
-          title="재생 전 한 마디 카운트"
-        >
-          <Timer size={16} strokeWidth={1.75} /> 카운트인
-        </button>
-        <button
-          type="button"
-          className={`chip${player.tabOnly ? " chip--active" : ""}`}
-          onClick={player.toggleTabOnly}
-          disabled={disabled}
-          title="오선보를 숨기고 타브 악보만 보기 (N)"
-        >
-          <ListMusic size={16} strokeWidth={1.75} /> 타브만
-        </button>
-      </div>
-
-      <button
-        type="button"
-        className="transport__help"
-        onClick={onToggleHelp}
-        title="단축키 도움말 (?)"
+      <div
+        className={`transport__tier2${mobileTier2Open ? " transport__tier2--open" : ""}`}
       >
-        ?
-      </button>
+        <label className="transport__group">
+          <span className="control-label">속도</span>
+          <select
+            value={String(player.speed)}
+            disabled={disabled}
+            onChange={(e) => player.setSpeed(Number(e.target.value))}
+            title="재생 속도 (+/-)"
+          >
+            {!SPEED_PRESETS.includes(player.speed) && (
+              <option value={String(player.speed)}>
+                {Math.round(player.speed * 100)}%
+              </option>
+            )}
+            {SPEED_PRESETS.map((s) => (
+              <option key={s} value={String(s)}>
+                {Math.round(s * 100)}%
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <BpmControl player={player} />
+
+        <div className="transport__group">
+          <span className="control-label">조옮김</span>
+          <button
+            type="button"
+            onClick={() => player.setTranspose(player.transpose - 1)}
+            disabled={disabled || player.transpose <= TRANSPOSE_MIN}
+            title="반음 내리기 ([)"
+          >
+            −
+          </button>
+          <button
+            type="button"
+            className="transport__transpose-value"
+            onClick={() => player.setTranspose(0)}
+            disabled={disabled}
+            title="클릭하면 원래 조로 되돌립니다"
+          >
+            {player.transpose > 0 ? `+${player.transpose}` : player.transpose}
+          </button>
+          <button
+            type="button"
+            onClick={() => player.setTranspose(player.transpose + 1)}
+            disabled={disabled || player.transpose >= TRANSPOSE_MAX}
+            title="반음 올리기 (])"
+          >
+            +
+          </button>
+        </div>
+
+        <label className="transport__group transport__volume">
+          <span className="control-label">볼륨</span>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.05}
+            value={player.masterVolume}
+            onChange={(e) => player.setMasterVolume(Number(e.target.value))}
+            onPointerUp={(e) => (e.target as HTMLElement).blur()}
+            title="전체 볼륨 (↑/↓)"
+          />
+        </label>
+
+        <div className="transport__group transport__toggles">
+          <button
+            type="button"
+            className={`chip${player.isLooping ? " chip--active" : ""}`}
+            onClick={player.toggleLoop}
+            disabled={disabled}
+            title={
+              player.barLoopRange
+                ? "곡 전체 반복 (L) — 지금은 타임라인에 지정한 구간 반복이 우선 적용 중이에요"
+                : "곡 전체 반복 (L)"
+            }
+          >
+            <Repeat size={16} strokeWidth={1.75} /> 반복
+          </button>
+          <button
+            type="button"
+            className={`chip${player.metronomeOn ? " chip--active" : ""}`}
+            onClick={player.toggleMetronome}
+            disabled={disabled}
+            title="메트로놈 (M)"
+          >
+            <Metronome size={16} strokeWidth={1.75} /> 메트로놈
+          </button>
+          <button
+            type="button"
+            className={`chip${player.countInOn ? " chip--active" : ""}`}
+            onClick={player.toggleCountIn}
+            disabled={disabled}
+            title="재생 전 한 마디 카운트"
+          >
+            <Timer size={16} strokeWidth={1.75} /> 카운트인
+          </button>
+          <button
+            type="button"
+            className={`chip${player.tabOnly ? " chip--active" : ""}`}
+            onClick={player.toggleTabOnly}
+            disabled={disabled}
+            title="오선보를 숨기고 타브 악보만 보기 (N)"
+          >
+            <ListMusic size={16} strokeWidth={1.75} /> 타브만
+          </button>
+        </div>
+
+        <button
+          type="button"
+          className="transport__help"
+          onClick={onToggleHelp}
+          title="단축키 도움말 (?)"
+        >
+          ?
+        </button>
+      </div>
     </footer>
   );
 }

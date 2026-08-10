@@ -952,3 +952,274 @@ kbd {
   font-weight: 400;
   color: var(--text-dim);
 }
+
+/* ── 반응형 (T-12) ──────────────────── */
+/* design.md "반응형 전략": 640px 브레이크포인트 하나로만 갈리는 두 개의
+   고정 타깃(데스크톱/모바일). 아래 "기본값(패스스루)" 규칙은 새로 추가된
+   래퍼 엘리먼트(사이드바 탭바/시트, 트랜스포트 tier1/tier2 등)가 데스크톱
+   에서는 완전히 투명하게 사라지도록 만든다 — `display: contents`로
+   래퍼 자체를 렌더트리에서 지워서 기존 데스크톱 레이아웃이 한 줄도
+   바뀌지 않게 한다. 실제 모바일 레이아웃(T-11)은 뒤의 `@media`에서만
+   적용된다. */
+
+.sidebar__tabbar,
+.sidebar__grabber,
+.edit-mobile-banner,
+.transport__tier2-toggle {
+  display: none;
+}
+.sidebar__sheet,
+.sidebar__sheet-body,
+.sidebar__section,
+.transport__tier1,
+.transport__tier2 {
+  display: contents;
+}
+.header-menu {
+  display: none;
+}
+
+@media (max-width: 639px) {
+  /* ── 헤더: 마크만 + 모드탭 + 케밥, 파일명은 서브바로 ── */
+  .header {
+    position: relative;
+    flex-wrap: nowrap;
+    height: 44px;
+    padding: 0 12px;
+    gap: 10px;
+    overflow: visible;
+  }
+  .header__logo-text {
+    display: none;
+  }
+  .mode-tab {
+    padding: 4px 10px;
+    font-size: 12px;
+  }
+  .header__actions {
+    display: none;
+  }
+  .header-menu {
+    display: block;
+    position: relative;
+    margin-left: auto;
+  }
+  .header-menu__trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+  }
+  .header-menu__submenu {
+    margin: 4px 0 4px 10px;
+    padding: 2px 0 2px 10px;
+    list-style: none;
+    border-left: 2px solid var(--panel-border);
+  }
+  .header__title {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    height: 24px;
+    line-height: 24px;
+    padding: 0 12px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--panel-border);
+    text-align: left;
+    font-size: 12px;
+    z-index: 5;
+  }
+
+  /* ── 사이드바 → 하단 시트 (트랙·주법·인코딩 / 고치기) ── */
+  .app-body {
+    position: relative;
+  }
+  .sidebar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    /* 트랜스포트 tier1(52px) 바로 위에 붙인다 */
+    bottom: 52px;
+    z-index: 15;
+    width: auto;
+    display: flex;
+    flex-direction: column;
+    border-right: none;
+    border-top: 1px solid var(--panel-border);
+    padding: 0;
+    overflow: visible;
+  }
+  .edit-mobile-banner {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 8px 12px;
+    font-size: 11px;
+    line-height: 1.5;
+    text-align: left;
+    background: var(--accent-soft);
+    color: var(--text);
+    border: none;
+    border-bottom: 1px solid var(--accent);
+    border-radius: 0;
+    flex-shrink: 0;
+  }
+  .sidebar__tabbar {
+    display: flex;
+    flex-shrink: 0;
+    height: 40px;
+    background: var(--panel);
+  }
+  .sidebar__tab {
+    flex: 1;
+    border: none;
+    border-right: 1px solid var(--panel-border);
+    border-radius: 0;
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .sidebar__tab:last-child {
+    border-right: none;
+  }
+  .sidebar__tab--active {
+    color: var(--accent);
+    background: var(--bg);
+  }
+  .sidebar__sheet {
+    display: block;
+    flex-shrink: 0;
+    max-height: 0;
+    overflow: hidden;
+    background: var(--panel);
+    transition: max-height 0.15s ease;
+  }
+  .sidebar__sheet--open {
+    max-height: 45vh;
+  }
+  .sidebar__grabber {
+    display: block;
+    width: 38px;
+    height: 4px;
+    margin: 8px auto 4px;
+    border-radius: 2px;
+    background: var(--panel-border);
+  }
+  .sidebar__sheet-body {
+    display: block;
+    max-height: calc(45vh - 16px);
+    overflow-y: auto;
+    padding: 0 14px 14px;
+  }
+  .sidebar__section {
+    display: none;
+  }
+  .sidebar__section--active {
+    display: block;
+  }
+  /* 한 섹션만 보일 때는 이전 섹션과의 구분선이 필요 없다. */
+  .sidebar__section .techniques,
+  .sidebar__section .encoding {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+  }
+
+  /* ── 악보 뷰: 고정된 사이드바 탭바(40px)+트랜스포트 tier1(52px)만큼
+     여백을 확보한다. Timeline은 악보가 있을 때만 렌더링되므로(스스로
+     여백을 만들 콘텐츠가 없는 빈 상태에서는) 빈 상태·에러 배너·알림도
+     따로 같은 92px만큼 밀어 둔다. */
+  .timeline {
+    padding-bottom: 92px;
+  }
+  .empty-state {
+    padding-bottom: 92px;
+  }
+  .error-banner,
+  .notice {
+    bottom: 108px;
+  }
+
+  /* ── Timeline: 톤 라벨은 hover가 없는 터치에서 못 펼치므로 점만 ── */
+  .timeline__count {
+    display: none;
+  }
+  .timeline__tone-label {
+    display: none;
+  }
+  .timeline__strip {
+    height: 32px;
+  }
+  /* 라벨이 사라져서 점만 남은 터치 타깃이 너무 작아지지 않게 여백만
+     넓힌다 — 점 자체의 시각 크기는 그대로 둔다. */
+  .timeline__tone {
+    padding: 7px 6px;
+  }
+
+  /* ── 트랜스포트 바: tier1(상시) / tier2(접힘) ── */
+  .transport {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 16;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: 0;
+  }
+  .transport__tier1 {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 52px;
+    padding: 0 10px;
+    flex-shrink: 0;
+  }
+  .transport__group {
+    gap: 4px;
+  }
+  .transport__bars {
+    flex: 1;
+    justify-content: center;
+    min-width: 0;
+  }
+  .transport__bars .transport__bar-label {
+    min-width: 0;
+    font-size: 12px;
+  }
+  .transport__play,
+  .transport__stop {
+    height: 44px;
+  }
+  .transport__tier2-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .transport__tier2 {
+    display: none;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    max-height: 40vh;
+    overflow-y: auto;
+    padding: 12px;
+    border-top: 1px solid var(--panel-border);
+    background: var(--panel);
+  }
+  .transport__tier2--open {
+    display: flex;
+  }
+  .transport__tier2 .transport__help {
+    margin-left: 0;
+  }
+}
