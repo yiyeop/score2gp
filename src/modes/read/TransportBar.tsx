@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ListMusic, Metronome, Repeat, Timer } from "lucide-react";
 import type { PlayerHandle } from "../../player/useAlphaTab";
 import {
   SPEED_MAX,
@@ -194,7 +195,7 @@ export function TransportBar({
               : "곡 전체 반복 (L)"
           }
         >
-          🔁 반복
+          <Repeat size={16} strokeWidth={1.75} /> 반복
         </button>
         <button
           type="button"
@@ -203,7 +204,7 @@ export function TransportBar({
           disabled={disabled}
           title="메트로놈 (M)"
         >
-          🎵 메트로놈
+          <Metronome size={16} strokeWidth={1.75} /> 메트로놈
         </button>
         <button
           type="button"
@@ -212,7 +213,7 @@ export function TransportBar({
           disabled={disabled}
           title="재생 전 한 마디 카운트"
         >
-          🥁 카운트인
+          <Timer size={16} strokeWidth={1.75} /> 카운트인
         </button>
         <button
           type="button"
@@ -221,7 +222,7 @@ export function TransportBar({
           disabled={disabled}
           title="오선보를 숨기고 타브 악보만 보기 (N)"
         >
-          🎼 타브만
+          <ListMusic size={16} strokeWidth={1.75} /> 타브만
         </button>
       </div>
 

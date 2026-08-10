@@ -348,6 +348,9 @@ button.primary {
 }
 
 .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 3px 8px;
   font-size: 11px;
   font-weight: 700;
@@ -445,12 +448,19 @@ button.primary {
   bottom: 16px;
   left: 50%;
   transform: translateX(-50%);
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
   background: #5c2b29;
   border: 1px solid #d9534f;
   padding: 8px 16px;
   border-radius: 8px;
   font-size: 13px;
   max-width: 80%;
+}
+.error-banner svg {
+  flex-shrink: 0;
+  margin-top: 2px;
 }
 
 /* ── 톤/구간 타임라인 ───────────────── */
@@ -725,6 +735,10 @@ button.primary {
   justify-content: space-between;
   margin-bottom: 12px;
 }
+.overlay__head button {
+  display: inline-flex;
+  align-items: center;
+}
 .overlay__head h2 {
   margin: 0;
   font-size: 16px;
@@ -754,6 +768,11 @@ kbd {
 /* 내보내기 메뉴 */
 .export {
   position: relative;
+}
+.export > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 .export__backdrop {
   position: fixed;

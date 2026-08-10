@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Check, TriangleAlert } from "lucide-react";
 import { useAlphaTab } from "./player/useAlphaTab";
 import { usePracticeSettingsPersistence } from "./player/usePracticeSettingsPersistence";
 import { useShortcuts } from "./shortcuts/useShortcuts";
@@ -50,7 +51,13 @@ function ExportMenu({
         onClick={() => setOpen((v) => !v)}
         title="악보를 다른 형식으로 저장합니다"
       >
-        {saved ? "내보냄 ✓" : "내보내기"}
+        {saved ? (
+          <>
+            내보냄 <Check size={16} strokeWidth={1.75} />
+          </>
+        ) : (
+          "내보내기"
+        )}
       </button>
       {open && (
         <>
@@ -262,7 +269,10 @@ function App() {
           )}
           {player.isLoading && <div className="loading">악보 불러오는 중…</div>}
           {(player.error || convertError) && (
-            <div className="error-banner">⚠️ {convertError ?? player.error}</div>
+            <div className="error-banner">
+              <TriangleAlert size={16} strokeWidth={1.75} />{" "}
+              {convertError ?? player.error}
+            </div>
           )}
           {reusedNotice && !convertError && (
             <button
