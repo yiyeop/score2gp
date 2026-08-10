@@ -173,7 +173,23 @@ function App() {
   return (
     <div className="app">
       <header className="header">
-        <span className="header__logo">🎸 Score2GP</span>
+        <span className="header__logo">
+          <svg
+            className="header__logo-mark"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden="true"
+          >
+            <line x1="3" y1="3" x2="22" y2="3" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+            <line x1="3" y1="9" x2="22" y2="9" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+            <line x1="3" y1="15" x2="22" y2="15" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+            <line x1="3" y1="21" x2="22" y2="21" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+            <path d="M3 1 L11 12 L3 23 Z" fill="currentColor" />
+          </svg>
+          <span className="header__logo-text">Score2GP</span>
+        </span>
         <nav className="header__modes">
           {APP_MODES.map((m) => (
             <button

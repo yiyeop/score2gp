@@ -66,9 +66,16 @@ button.primary {
   border-bottom: 1px solid var(--panel-border);
 }
 .header__logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-weight: 700;
   font-size: 15px;
   white-space: nowrap;
+}
+.header__logo-mark {
+  flex-shrink: 0;
+  color: var(--accent);
 }
 .header__modes {
   display: flex;
