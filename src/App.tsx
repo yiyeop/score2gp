@@ -95,7 +95,9 @@ function App() {
   // 닫으면(또는 최초 진입 후 확인하면) 다시 모드를 오가도 다시 뜨지 않는다.
   const [editHintDismissed, setEditHintDismissed] = useState(false);
 
-  const editor = useScoreEditor(player);
+  // 내보낸 뒤 고치기 모드에서 실제로 뭔가 바뀌면(되돌리기/다시하기 포함)
+  // "내보냄 ✓" 표시가 최신 상태를 가리키지 않으므로 되돌린다.
+  const editor = useScoreEditor(player, () => setSaved(false));
   // 속도·조옮김·볼륨·탭 전용 보기를 파일(곡) 단위로 저장/복원한다 (T-8).
   usePracticeSettingsPersistence(player, fileName);
 

@@ -34,7 +34,12 @@ export const FRET_MAX = 24;
 /** 되돌리기 기록은 이만큼만 남긴다. 그보다 옛 편집으로 돌아갈 일은 드물다. */
 const HISTORY_LIMIT = 100;
 
-export function useScoreEditor(player: PlayerHandle) {
+/**
+ * `onEdit`은 실제로 악보가 바뀔 때만(되돌리기/다시하기 포함) 불린다 — 아무 것도
+ * 안 바뀐 되돌리기/다시하기 시도(기록이 비었을 때)나 no-op 변경 시도는 부르지 않는다.
+ * 호출자는 이걸 "지금 내보낸 파일이 최신 상태와 어긋났다"는 신호로 쓸 수 있다.
+ */
+export function useScoreEditor(player: PlayerHandle, onEdit?: () => void) {
   const [past, setPast] = useState<Change[]>([]);
   const [future, setFuture] = useState<Change[]>([]);
   // 프렛을 두 자리로 칠 수 있게 잠깐 기억한다 ('1' 다음 '2' → 12프렛)
@@ -52,8 +57,9 @@ export function useScoreEditor(player: PlayerHandle) {
       player.refreshScore();
       setPast((p) => [...p, change].slice(-HISTORY_LIMIT));
       setFuture([]);
+      onEdit?.();
     },
-    [player],
+    [player, onEdit],
   );
 
   const undo = useCallback(() => {
@@ -63,9 +69,10 @@ export function useScoreEditor(player: PlayerHandle) {
       last.undo();
       player.refreshScore();
       setFuture((f) => [last, ...f]);
+      onEdit?.();
       return p.slice(0, -1);
     });
-  }, [player]);
+  }, [player, onEdit]);
 
   const redo = useCallback(() => {
     setFuture((f) => {
@@ -74,9 +81,10 @@ export function useScoreEditor(player: PlayerHandle) {
       next.redo();
       player.refreshScore();
       setPast((p) => [...p, next].slice(-HISTORY_LIMIT));
+      onEdit?.();
       return rest;
     });
-  }, [player]);
+  }, [player, onEdit]);
 
   const beat = player.selection?.beat ?? null;
 
