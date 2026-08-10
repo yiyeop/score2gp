@@ -1,3 +1,4 @@
+import { Eye, EyeOff } from "lucide-react";
 import type { PlayerHandle } from "../../player/useAlphaTab";
 
 /**
@@ -64,7 +65,12 @@ export function TrackList({ player }: { player: PlayerHandle }) {
                     : player.showTracks([t.index])
                 }
               >
-                {t.name}
+                {visible ? (
+                  <Eye size={16} strokeWidth={1.75} />
+                ) : (
+                  <EyeOff size={16} strokeWidth={1.75} />
+                )}
+                <span className="track-item__name-text">{t.name}</span>
               </button>
               <div className="track-item__buttons">
                 <button

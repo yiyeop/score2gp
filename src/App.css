@@ -176,6 +176,9 @@ button.primary {
   margin-bottom: 8px;
 }
 .track-item__name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   flex: 1;
   min-width: 0;
   text-align: left;
@@ -184,6 +187,12 @@ button.primary {
   padding: 2px 4px;
   background: transparent;
   border: none;
+}
+.track-item__name svg {
+  flex-shrink: 0;
+}
+.track-item__name-text {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
