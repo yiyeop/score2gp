@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import type { PlayerHandle } from "../../player/useAlphaTab";
 import { ENCODING_CANDIDATES } from "../../lib/detectEncoding";
 import { TrackList } from "./TrackList";
@@ -62,6 +63,15 @@ export function ReadSidebar({
   onMobileTabChange: (tab: MobileSheetTab) => void;
 }) {
   const showEncodingTab = !!player.score && encodingNeedsAttention(player);
+
+  // 인코딩 문제가 해결돼 탭·섹션이 언마운트되면(showEncodingTab: true → false)
+  // mobileTab이 그 탭을 계속 가리켜 빈 시트만 남는 걸 막는다. onMobileTabChange
+  // 는 "같은 탭이면 닫는다" 토글이라 그대로 재사용해 닫는다(C7).
+  useEffect(() => {
+    if (mobileTab === "encoding" && !showEncodingTab) {
+      onMobileTabChange("encoding");
+    }
+  }, [mobileTab, showEncodingTab, onMobileTabChange]);
 
   return (
     <aside className="sidebar">

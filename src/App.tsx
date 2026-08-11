@@ -132,7 +132,7 @@ function HeaderMenu({
         title="더보기"
         aria-label="더보기"
       >
-        <EllipsisVertical size={20} strokeWidth={1.75} />
+        <EllipsisVertical size={16} strokeWidth={1.75} />
       </button>
       {open && (
         <>
@@ -414,7 +414,11 @@ function App() {
         <main
           className="score-viewport"
           ref={player.viewportRef}
-          onClick={mobilePanel ? closeMobilePanel : undefined}
+          onClick={
+            mobilePanel && !(mobilePanel.kind === "sheet" && mobilePanel.tab === "edit")
+              ? closeMobilePanel
+              : undefined
+          }
         >
           <div className="score-surface" ref={player.containerRef} />
           {!player.score && !player.isLoading && (

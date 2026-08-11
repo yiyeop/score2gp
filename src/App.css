@@ -528,6 +528,18 @@ button.primary {
   border-radius: 4px;
   overflow: hidden;
   cursor: pointer;
+  /* 길게 누르기로 구간 반복 시작점을 찍는 제스처가 브라우저의 스크롤/확대
+     처리와 부딪히지 않도록, 이 스트립 위 터치는 전부 우리가 직접 다룬다. */
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+/* 길게 누르기로 시작점을 찍어 "끝점을 기다리는 중"일 때의 피드백. 손을
+   뗀 뒤라 점선 마커(.timeline__loop-pending)만으로는 눈에 덜 띄어서,
+   스트립 전체에 옅은 테두리를 더한다. overflow:hidden과 함께라도 안전하게
+   보이도록 outline 대신 inset box-shadow를 쓴다. */
+.timeline__strip--picking {
+  box-shadow: inset 0 0 0 2px #f0ad4e;
 }
 .timeline__section {
   position: absolute;
@@ -1037,6 +1049,14 @@ kbd {
   .app-body {
     position: relative;
   }
+  /* .header__title(파일명 서브바)은 position:absolute; top:100%라 정상
+     흐름에 자리를 차지하지 않는다 — 파일이 열려 있을 때만 렌더링되므로
+     (App.tsx) .app-body가 그만큼 알아서 밀리지 않으면 서브바가 악보
+     뷰포트 상단 24px를 덮어 그 영역의 클릭까지 가로챈다. 서브바가 실제로
+     렌더링된 경우에만(:has) 같은 높이(24px)만큼 밀어낸다. */
+  .header:has(.header__title) + .app-body {
+    padding-top: 24px;
+  }
   .sidebar {
     position: fixed;
     left: 0;
@@ -1167,7 +1187,10 @@ kbd {
     right: 0;
     bottom: 0;
     z-index: 16;
-    flex-direction: column;
+    /* tier1(재생/정지/마디이동)은 DOM상 tier2보다 앞이지만 항상 화면
+       최하단에 고정돼야 하고, tier2는 그 위로 펼쳐져야 한다(T-11 설계).
+       DOM 순서를 바꾸지 않고 시각 순서만 뒤집는다. */
+    flex-direction: column-reverse;
     align-items: stretch;
     gap: 0;
     padding: 0;
@@ -1213,7 +1236,9 @@ kbd {
     max-height: 40vh;
     overflow-y: auto;
     padding: 12px;
-    border-top: 1px solid var(--panel-border);
+    /* 시각 순서가 tier2(위)/tier1(아래)로 뒤집혔으니 경계선도 tier2의
+       아래쪽(=tier1과 맞닿는 쪽)으로 옮긴다. */
+    border-bottom: 1px solid var(--panel-border);
     background: var(--panel);
   }
   .transport__tier2--open {
