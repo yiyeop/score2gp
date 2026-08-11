@@ -103,6 +103,9 @@ export function useAlphaTab() {
   const [metronomeOn, setMetronomeOn] = useState(false);
   const [countInOn, setCountInOn] = useState(false);
   const [tabOnly, setTabOnlyState] = useState(false);
+  // setTabOnly는 안정된 참조(빈 deps)의 useCallback이라 tabOnly state를 직접
+  // 클로저로 캡처하지 못한다 — 매 렌더 최신값을 여기 반영해 두고 그걸 읽는다.
+  const tabOnlyRef = useRef(false);
   const [visibleTracks, setVisibleTracks] = useState<number[]>([0]);
   const [hover, setHover] = useState<TechniqueHover | null>(null);
   // 주법 안내(사이드바 목록 + 악보 툴팁) 전체 on/off. 기본은 켜짐.
@@ -122,6 +125,7 @@ export function useAlphaTab() {
   selectionRef.current = selection;
   isLoopingRef.current = isLooping;
   barLoopRangeRef.current = barLoopRange;
+  tabOnlyRef.current = tabOnly;
 
   useEffect(() => {
     const el = containerRef.current;
@@ -626,15 +630,24 @@ export function useAlphaTab() {
     if (!next) setHover(null);
   }, [techniqueGuide]);
 
-  /** 탭 전용 보기를 켜거나 끈다(값을 직접 지정). 저장된 연습 설정을 복원할 때도 쓴다. */
+  /**
+   * 탭 전용 보기를 켜거나 끈다(값을 직접 지정). 저장된 연습 설정을 복원할 때도 쓴다.
+   *
+   * T-16: 파일별 연습 설정 복원(T-8)이 파일을 열 때마다 지금 값과 같은 값으로도
+   * 이 함수를 호출한다. 값이 실제로 안 바뀌었으면 `updateSettings`/`render`를
+   * 건너뛴다 — 안 그러면 초기 렌더 직후 전체 재레이아웃이 한 번 더 걸려서
+   * 마디가 많은 악보일수록 로드가 눈에 띄게 느려지고 화면이 깜빡인다.
+   */
   const setTabOnly = useCallback((next: boolean) => {
     const api = apiRef.current;
     if (!api) return;
+    if (next === tabOnlyRef.current) return;
     api.settings.display.staveProfile = next
       ? alphaTab.StaveProfile.Tab
       : alphaTab.StaveProfile.Default;
     api.updateSettings();
     api.render();
+    tabOnlyRef.current = next;
     setTabOnlyState(next);
   }, []);
 
