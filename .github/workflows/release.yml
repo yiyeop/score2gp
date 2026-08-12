@@ -3,6 +3,12 @@ name: release
 # v* 태그를 밀면 macOS(Apple Silicon)·Windows·Linux 3개 플랫폼용 배포판을
 # 만들어 초안 GitHub Release에 첨부한다.
 #
+# macOS는 Apple Silicon만 낸다 — Intel Mac(x86_64)은 지원하지 않기로 했다
+# (사용자 결정). 빠뜨린 게 아니라 뺀 것이므로, 나중에 'macos-13이 없네'
+# 하고 무심코 넣지 말 것. 넣으려면 지원 범위부터 다시 정해야 한다.
+# arm64 바이너리는 Intel Mac에서 Rosetta로도 안 돌아가므로, 릴리스 노트에
+# 전용임을 명시한다(아래 releaseBody).
+#
 # v1은 코드 서명을 하지 않는다(사용자 결정 — 인증서가 생기면 나중 티켓에서
 # signingIdentity/certificateThumbprint 등을 추가한다). 그래서 macOS는 실행
 # 시 "확인되지 않은 개발자" 경고가, Windows는 SmartScreen 경고가 뜬다 —
@@ -99,7 +105,13 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: "Score2GP ${{ github.ref_name }}"
           releaseBody: |
-            자동 빌드. 이 버전은 서명되지 않았다 — 실행 시 macOS는 "확인되지
-            않은 개발자", Windows는 SmartScreen 경고가 뜰 수 있다.
+            자동 빌드입니다.
+
+            **macOS 빌드는 Apple Silicon(M1 이상) 전용입니다.** Intel Mac에서는
+            실행되지 않습니다 — Rosetta로도 안 됩니다. 받기 전에 확인해 주세요:
+            메뉴 → 이 Mac에 관하여 → 칩이 `Apple M...`이어야 합니다.
+
+            서명되지 않은 빌드라 처음 열 때 경고가 뜹니다 — macOS는 "확인되지
+            않은 개발자", Windows는 SmartScreen입니다.
           releaseDraft: true
           prerelease: false
