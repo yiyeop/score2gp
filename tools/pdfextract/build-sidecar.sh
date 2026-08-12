@@ -13,16 +13,28 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-VENV=.venv/bin
 NAME=score2gp-convert
 OUT=../../src-tauri/binaries
+
+# venv 레이아웃과 실행 파일 이름이 OS마다 다르다 — Windows는 .venv/Scripts/에
+# python.exe로 들어가고, 사이드카 이름에도 .exe가 붙어야 한다(Tauri가 대상
+# 트리플을 뗀 뒤 실행 시 찾는 이름은 convert.rs의 locate_sidecar 참고).
+if [ -d .venv/Scripts ]; then
+    VENV=.venv/Scripts
+    PY=python.exe
+    EXT=.exe
+else
+    VENV=.venv/bin
+    PY=python3
+    EXT=
+fi
 
 TRIPLE=$(rustc -vV | sed -n 's/^host: //p')
 if [ -z "$TRIPLE" ]; then
     echo "대상 트리플을 알 수 없습니다 (rustc가 필요합니다)" >&2
     exit 1
 fi
-TARGET="$OUT/$NAME-$TRIPLE"
+TARGET="$OUT/$NAME-$TRIPLE$EXT"
 
 # 앱 빌드 때마다 불리므로, 소스가 그대로면 그냥 넘어간다.
 if [ -x "$TARGET" ] && [ -z "$(find ./*.py -newer "$TARGET" 2>/dev/null)" ]; then
@@ -30,7 +42,7 @@ if [ -x "$TARGET" ] && [ -z "$(find ./*.py -newer "$TARGET" 2>/dev/null)" ]; the
     exit 0
 fi
 
-if [ ! -x "$VENV/python3" ]; then
+if [ ! -f "$VENV/$PY" ]; then
     echo "변환기를 묶으려면 파이썬 가상환경이 필요합니다:" >&2
     echo "  cd tools/pdfextract" >&2
     echo "  python3 -m venv .venv && .venv/bin/pip install pymupdf pyguitarpro pyinstaller" >&2
@@ -38,12 +50,12 @@ if [ ! -x "$VENV/python3" ]; then
 fi
 
 echo "빌드 중… (몇 분 걸립니다)"
-"$VENV/pyinstaller" --onefile --name "$NAME" \
+"$VENV/pyinstaller$EXT" --onefile --name "$NAME" \
     --distpath dist --workpath build --noconfirm \
     convert.py >/dev/null
 
 mkdir -p "$OUT"
-cp "dist/$NAME" "$TARGET"
+cp "dist/$NAME$EXT" "$TARGET"
 chmod +x "$TARGET"
 
-echo "완료: src-tauri/binaries/$NAME-$TRIPLE ($(du -h "$TARGET" | cut -f1))"
+echo "완료: src-tauri/binaries/$NAME-$TRIPLE$EXT ($(du -h "$TARGET" | cut -f1))"

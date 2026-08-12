@@ -1,0 +1,105 @@
+name: release
+
+# v* 태그를 밀면 macOS(Apple Silicon)·Windows·Linux 3개 플랫폼용 배포판을
+# 만들어 초안 GitHub Release에 첨부한다.
+#
+# v1은 코드 서명을 하지 않는다(사용자 결정 — 인증서가 생기면 나중 티켓에서
+# signingIdentity/certificateThumbprint 등을 추가한다). 그래서 macOS는 실행
+# 시 "확인되지 않은 개발자" 경고가, Windows는 SmartScreen 경고가 뜬다 —
+# v1 범위에서는 감수하기로 했다.
+#
+# 사이드카(tools/pdfextract의 변환기)는 PyInstaller로 묶는데 크로스 컴파일이
+# 안 되므로 3개 러너(macos-14/windows-latest/ubuntu-latest)에서 각각 파이썬
+# venv를 만들고 그 OS용 사이드카를 직접 빌드한다.
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-14 # Apple Silicon (arm64)
+          - platform: windows-latest
+          - platform: ubuntu-latest
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Tauri 2 리눅스 빌드에 필요한 시스템 라이브러리.
+      # rpm도 넣는다 — tauri.conf.json의 bundle.targets가 "all"이라
+      # rpmbuild가 없으면 리눅스 빌드가 실패한다.
+      - name: Install Linux system dependencies
+        if: matrix.platform == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libssl-dev \
+            libgtk-3-dev \
+            rpm
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      # tools/pdfextract/build-sidecar.sh가 이 venv를 찾아서 쓴다.
+      # venv 레이아웃이 OS마다 달라서(Windows는 Scripts/, 그 외는 bin/)
+      # pip 경로만 여기서 갈라 찾는다 — 실제 사이드카 빌드는
+      # build-sidecar.sh 안에서 마저 OS를 가려 처리한다.
+      - name: Set up pdfextract sidecar virtualenv
+        shell: bash
+        run: |
+          cd tools/pdfextract
+          python -m venv .venv
+          if [ -f .venv/bin/pip ]; then
+            PIP=.venv/bin/pip
+          else
+            PIP=.venv/Scripts/pip.exe
+          fi
+          "$PIP" install --upgrade pip
+          "$PIP" install pymupdf pyguitarpro pyinstaller
+
+      # tauri-action이 내부적으로 `tauri build`를 부르고, 그 전에 Tauri
+      # 자신의 beforeBuildCommand(프런트엔드 빌드 + 사이드카 빌드)를 실행한다
+      # — 별도 스텝으로 다시 부를 필요가 없다. 서명 관련 입력은 주지 않는다
+      # (v1은 무서명).
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "Score2GP ${{ github.ref_name }}"
+          releaseBody: |
+            자동 빌드. 이 버전은 서명되지 않았다 — 실행 시 macOS는 "확인되지
+            않은 개발자", Windows는 SmartScreen 경고가 뜰 수 있다.
+          releaseDraft: true
+          prerelease: false
