@@ -1061,8 +1061,12 @@ kbd {
     position: fixed;
     left: 0;
     right: 0;
-    /* 트랜스포트 tier1(52px) 바로 위에 붙인다 */
-    bottom: 52px;
+    /* `.transport`(tier1 고정 52px, tier2가 펼쳐지면 그만큼 더 큼) 바로
+       위에 붙인다. `--mobile-transport-height`는 App.tsx가
+       ResizeObserver로 `.transport`의 실제 렌더링 높이를 재 흘려보내는
+       값이라 tier2 유무에 따라 자동으로 따라간다(T-15 QA 재검수 1차 —
+       tier2가 펼쳐지면 이 탭바를 그대로 덮던 문제). */
+    bottom: var(--mobile-transport-height, 52px);
     z-index: 15;
     width: auto;
     display: flex;

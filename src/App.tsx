@@ -248,6 +248,28 @@ function App() {
   // 모드를 바꾸면 이전 모드가 열어 둔 시트/tier2는 의미가 없으므로 접는다.
   useEffect(() => setMobilePanel(null), [mode]);
 
+  // 모바일에서 `.sidebar` 탭바는 `.transport`(tier1 고정 + tier2 접힘/펼침)
+  // 바로 위에 붙어야 한다. tier2가 펼쳐지면 `.transport`의 실제 높이가
+  // 내용에 따라 가변적으로(최대 40vh) 커지는데, 고정 오프셋(52px)으로는
+  // 이를 따라가지 못해 사이드바 탭바가 tier2 밑에 가려지고 클릭도 tier2가
+  // 가로채는 문제가 있었다(T-15 QA 재검수 1차). `.transport`의 실제
+  // 렌더링 높이를 측정해 CSS 변수로 흘려보내 사이드바가 항상 그 위에
+  // 붙게 한다 — tier1/tier2 어느 쪽이 열려 있든 값이 스스로 맞다.
+  useEffect(() => {
+    const transportEl = document.querySelector<HTMLElement>(".transport");
+    if (!transportEl) return;
+    const update = () => {
+      document.documentElement.style.setProperty(
+        "--mobile-transport-height",
+        `${transportEl.getBoundingClientRect().height}px`,
+      );
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(transportEl);
+    return () => ro.disconnect();
+  }, [mode]);
+
   // 내보낸 뒤 고치기 모드에서 실제로 뭔가 바뀌면(되돌리기/다시하기 포함)
   // "내보냄 ✓" 표시가 최신 상태를 가리키지 않으므로 되돌린다.
   const editor = useScoreEditor(player, () => setSaved(false));
