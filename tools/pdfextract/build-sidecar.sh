@@ -49,6 +49,35 @@ if [ ! -f "$VENV/$PY" ]; then
     exit 1
 fi
 
+# 파일 이름은 **rustc의** 트리플로 붙는데, 알맹이는 **파이썬 인터프리터의**
+# 아키텍처로 묶인다(PyInstaller가 그 인터프리터를 통째로 담기 때문이다).
+# 둘이 어긋나면 이름만 arm64인 x86_64 바이너리가 배포판에 담기고, 앱은
+# 사용자 기계에서 조용히 실패한다 — 빌드도 번들링도 성공하므로 알아채기
+# 어렵다. 몇 분짜리 PyInstaller를 돌리기 전에 여기서 막는다.
+#
+# 이건 가상의 위험이 아니다. 개발기가 Apple Silicon인데 툴체인이 전부
+# Intel(Rosetta) 경로에 있는 상태라, rustup만 arm64로 새로 깔면 곧바로
+# rustc는 aarch64 · 파이썬은 x86_64가 되어 이 상황이 만들어진다.
+WANT_ARCH=${TRIPLE%%-*}
+HAVE_ARCH=$("$VENV/$PY" -c 'import platform; print(platform.machine())')
+case "$(printf '%s' "$HAVE_ARCH" | tr '[:upper:]' '[:lower:]')" in
+    arm64 | aarch64) HAVE_ARCH=aarch64 ;;
+    amd64 | x86_64)  HAVE_ARCH=x86_64 ;;
+esac
+
+if [ "$WANT_ARCH" != "$HAVE_ARCH" ]; then
+    echo "아키텍처가 어긋납니다 — 사이드카를 만들지 않습니다." >&2
+    echo "  rustc  : $TRIPLE ($WANT_ARCH)" >&2
+    echo "  python : $HAVE_ARCH  ($VENV/$PY)" >&2
+    echo >&2
+    echo "이대로 묶으면 $WANT_ARCH 이름이 붙은 $HAVE_ARCH 바이너리가 나옵니다." >&2
+    echo "둘 중 하나를 맞춰 주세요 — 보통 파이썬 쪽을 rustc에 맞춥니다:" >&2
+    echo "  cd tools/pdfextract && rm -rf .venv" >&2
+    echo "  <$WANT_ARCH 파이썬> -m venv .venv" >&2
+    echo "  .venv/bin/pip install pymupdf pyguitarpro pyinstaller" >&2
+    exit 1
+fi
+
 echo "빌드 중… (몇 분 걸립니다)"
 "$VENV/pyinstaller$EXT" --onefile --name "$NAME" \
     --distpath dist --workpath build --noconfirm \
@@ -58,4 +87,4 @@ mkdir -p "$OUT"
 cp "dist/$NAME$EXT" "$TARGET"
 chmod +x "$TARGET"
 
-echo "완료: src-tauri/binaries/$NAME-$TRIPLE$EXT ($(du -h "$TARGET" | cut -f1))"
+echo "완료: src-tauri/binaries/$NAME-$TRIPLE$EXT ($(du -h "$TARGET" | cut -f1), $HAVE_ARCH)"
