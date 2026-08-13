@@ -36,3 +36,8 @@ tools/pdfextract/*.spec
 # 사이드카 실행 파일 (33MB). 플랫폼마다 달라서 커밋하지 않는다.
 # tools/pdfextract/build-sidecar.sh 로 만든다.
 src-tauri/binaries/
+
+# 기획·티켓·에이전트 작업 상태 — GitHub에 공개하지 않는다(사용자 결정).
+.prdt
+.claude
+docs
