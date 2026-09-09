@@ -111,13 +111,18 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: "Score2GP ${{ github.ref_name }}"
           releaseBody: |
-            자동 빌드입니다.
+            Automated build.
 
-            **macOS 빌드는 Apple Silicon(M1 이상) 전용입니다.** Intel Mac에서는
-            실행되지 않습니다 — Rosetta로도 안 됩니다. 받기 전에 확인해 주세요:
-            메뉴 → 이 Mac에 관하여 → 칩이 `Apple M...`이어야 합니다.
+            **The macOS build is Apple Silicon only (M1 and later).** It will not
+            run on an Intel Mac, not even under Rosetta. Check before downloading:
+             menu → About This Mac → the chip should read `Apple M...`.
 
-            서명되지 않은 빌드라 처음 열 때 경고가 뜹니다 — macOS는 "확인되지
-            않은 개발자", Windows는 SmartScreen입니다.
+            Pick by extension: `.dmg` on macOS, `-setup.exe` on Windows,
+            `.AppImage` (or `.deb`, `.rpm`) on Linux. `.app.tar.gz` is only used
+            by the updater — you don't need to download it.
+
+            These builds are unsigned, so the first launch is blocked once:
+            macOS says "unidentified developer", Windows shows SmartScreen.
+            See the install notes in the README for how to get past it.
           releaseDraft: true
           prerelease: false
