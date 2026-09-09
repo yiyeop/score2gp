@@ -4,7 +4,7 @@ import { toneName } from "../../lib/markers";
 import type { PlayerHandle } from "../../player/useAlphaTab";
 
 /**
- * 악보 고치기와 되돌리기.
+ * 악보 편집과 되돌리기.
  *
  * 이 모드가 있는 이유는 **PDF 변환이 틀린 곳을 사람이 잡아주기 위해서**다.
  * 그래서 새 곡을 쓰는 데 필요한 기능(마디 추가, 주법 넣기 등)은 두지 않고,

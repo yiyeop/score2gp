@@ -9,6 +9,8 @@
   --text: #e8eaed;
   --text-dim: #9aa0a8;
   --accent: #4f8cff;
+  /* 앱 아이콘의 브랜드 주황. 로고의 '2'에만 쓴다. */
+  --brand-orange: #ff5a1f;
   --accent-soft: rgba(79, 140, 255, 0.18);
   font-family: "Pretendard", "Apple SD Gothic Neo", system-ui, -apple-system,
     sans-serif;
@@ -75,7 +77,9 @@ button.primary {
 }
 .header__logo-mark {
   flex-shrink: 0;
-  color: var(--accent);
+  /* 아이콘 원본에서 차콜(#111)로 그려진 획이 currentColor 로 들어온다.
+     헤더가 어두우므로 본문색을 준다. */
+  color: var(--text);
 }
 .header__modes {
   display: flex;
@@ -96,7 +100,7 @@ button.primary {
   background: var(--accent);
   color: #fff;
 }
-/* "고치기"처럼 보정 전용 도구인 모드는 읽기 모드보다 낮은 무게로 보여준다. */
+/* "편집 모드"처럼 보정 전용 도구인 모드는 읽기 모드보다 낮은 무게로 보여준다. */
 .mode-tab--secondary.mode-tab--active {
   background: transparent;
   border: 1px solid var(--accent);
@@ -864,7 +868,7 @@ kbd {
 }
 
 /* ── 편집 모드 ─────────────────────── */
-/* 고치기 모드 최초 진입 안내. 누르면 닫힌다(edit-panel__what). */
+/* 편집 모드 최초 진입 안내. 누르면 닫힌다(edit-panel__what). */
 .edit-panel__what {
   display: block;
   width: 100%;
@@ -1001,9 +1005,6 @@ kbd {
     gap: 10px;
     overflow: visible;
   }
-  .header__logo-text {
-    display: none;
-  }
   .mode-tab {
     padding: 4px 10px;
     font-size: 12px;
@@ -1045,7 +1046,7 @@ kbd {
     z-index: 5;
   }
 
-  /* ── 사이드바 → 하단 시트 (트랙·주법·인코딩 / 고치기) ── */
+  /* ── 사이드바 → 하단 시트 (트랙·주법·인코딩 / 편집 모드) ── */
   .app-body {
     position: relative;
   }

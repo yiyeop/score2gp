@@ -224,10 +224,10 @@ function App() {
   const [saved, setSaved] = useState(false);
   // 전에 바꿔 둔 결과를 그대로 열었을 때만 잠깐 알린다.
   const [reusedNotice, setReusedNotice] = useState(false);
-  // 고치기 모드가 "보정 전용 도구"라는 안내. 세션당 한 번만 보여주고,
+  // 편집 모드가 "보정 전용 도구"라는 안내. 세션당 한 번만 보여주고,
   // 닫으면(또는 최초 진입 후 확인하면) 다시 모드를 오가도 다시 뜨지 않는다.
   const [editHintDismissed, setEditHintDismissed] = useState(false);
-  // 좁은 화면에서 고치기가 정밀 조작에 불리하다는 안내(모바일 전용).
+  // 좁은 화면에서 편집 모드가 정밀 조작에 불리하다는 안내(모바일 전용).
   // 위 editHintDismissed와 같은 "세션당 한 번" 패턴이라 App에 함께 둔다.
   const [mobileEditBannerDismissed, setMobileEditBannerDismissed] = useState(false);
 
@@ -270,7 +270,7 @@ function App() {
     return () => ro.disconnect();
   }, [mode]);
 
-  // 내보낸 뒤 고치기 모드에서 실제로 뭔가 바뀌면(되돌리기/다시하기 포함)
+  // 내보낸 뒤 편집 모드에서 실제로 뭔가 바뀌면(되돌리기/다시하기 포함)
   // "내보냄 ✓" 표시가 최신 상태를 가리키지 않으므로 되돌린다.
   const editor = useScoreEditor(player, () => setSaved(false));
   // 속도·조옮김·볼륨·탭 전용 보기를 파일(곡) 단위로 저장/복원한다 (T-8).
@@ -342,21 +342,35 @@ function App() {
     <div className="app">
       <header className="header">
         <span className="header__logo">
+          {/* 앱 아이콘과 같은 로고. 원본은 src-tauri/icons/score2gp-icon.svg 다.
+              차콜(#111)로 그려진 획은 currentColor 로 바꿔 뒀다 — 헤더가 어두워서
+              원본 색 그대로 두면 몸통과 S·G가 배경에 묻힌다. 브랜드 색인 주황
+              '2'만 고정색으로 남겨 어느 테마에서든 같은 인상을 준다. */}
           <svg
             className="header__logo-mark"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            aria-hidden="true"
+            width="30"
+            height="30"
+            viewBox="0 0 1024 1024"
+            role="img"
+            aria-label="Score2GP"
           >
-            <line x1="3" y1="3" x2="22" y2="3" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
-            <line x1="3" y1="9" x2="22" y2="9" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
-            <line x1="3" y1="15" x2="22" y2="15" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
-            <line x1="3" y1="21" x2="22" y2="21" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
-            <path d="M3 1 L11 12 L3 23 Z" fill="currentColor" />
+            <g
+              fill="none"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="34"
+            >
+              <path d="M410 185 C350 137 285 146 252 204 C222 257 244 321 265 378 C286 435 236 493 188 558 C155 630 151 711 176 790 C211 898 325 938 512 940 C695 938 808 899 846 790 C873 710 875 629 850 558 C820 491 751 437 769 385 C788 330 811 277 788 237 C769 203 733 207 711 247 C689 287 660 315 620 315" />
+              <path d="M474 132 L474 318" />
+              <path d="M540 132 L540 318" />
+            </g>
+            <g fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="62">
+              <path stroke="currentColor" d="M410 585 C404 544 378 522 343 522 C299 522 271 550 271 591 C271 633 303 651 347 669 C394 688 418 716 418 761 C418 814 385 846 340 846 C293 846 263 817 260 773" />
+              <path stroke="var(--brand-orange)" d="M467 585 C472 544 500 522 536 522 C578 522 606 550 606 591 C606 627 586 654 557 690 L475 829 L612 829" />
+              <path stroke="currentColor" d="M794 585 C781 545 752 522 713 522 C654 522 626 588 626 684 C626 784 654 846 713 846 C758 846 789 812 789 753 L789 702 L729 702" />
+            </g>
           </svg>
-          <span className="header__logo-text">Score2GP</span>
         </span>
         <nav className="header__modes">
           {APP_MODES.map((m) => (

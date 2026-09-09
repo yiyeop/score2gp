@@ -24,13 +24,13 @@ export function EditModeSidebar({
 }: {
   player: PlayerHandle;
   editor: ScoreEditor;
-  /** 고치기 모드가 "보정 전용 도구"라는 첫 진입 안내를 보여줄지. */
+  /** 편집 모드가 "보정 전용 도구"라는 첫 진입 안내를 보여줄지. */
   showHint: boolean;
   onDismissHint: () => void;
   /** 모바일 하단 시트가 펼쳐져 있는지 (읽기 모드의 sidebar tab 하나에 해당). */
   mobileOpen: boolean;
   onMobileToggle: () => void;
-  /** 좁은 화면에서 고치기가 정밀 조작에 불리하다는 안내를 보여줄지(세션당 1회). */
+  /** 좁은 화면에서 편집 모드가 정밀 조작에 불리하다는 안내를 보여줄지(세션당 1회). */
   showMobileNarrowBanner: boolean;
   onDismissMobileNarrowBanner: () => void;
 }) {
@@ -56,7 +56,7 @@ export function EditModeSidebar({
       onClick={onDismissMobileNarrowBanner}
       title="누르면 닫혀요"
     >
-      고치기는 화면이 좁으면 정밀하게 조작하기 어려워요 — 큰 화면에서 이용을
+      편집 모드는 화면이 좁으면 정밀하게 조작하기 어려워요 — 큰 화면에서 이용을
       권장해요
     </button>
   ) : null;
@@ -68,7 +68,7 @@ export function EditModeSidebar({
         className={`sidebar__tab${mobileOpen ? " sidebar__tab--active" : ""}`}
         onClick={onMobileToggle}
       >
-        고치기
+        편집 모드
       </button>
     </div>
   );
@@ -89,7 +89,7 @@ export function EditModeSidebar({
       <aside className="sidebar track-list--empty">
         {wrapSheet(
           <>
-            <h2 className="panel-title">고치기</h2>
+            <h2 className="panel-title">편집 모드</h2>
             {hint}
             <p>악보를 열면 여기서 고칠 수 있어요.</p>
           </>,
@@ -105,7 +105,7 @@ export function EditModeSidebar({
       <aside className="sidebar track-list--empty">
         {wrapSheet(
           <>
-            <h2 className="panel-title">고치기</h2>
+            <h2 className="panel-title">편집 모드</h2>
             {hint}
             <p>
               악보에서 고칠 음을 눌러보세요.
@@ -124,7 +124,7 @@ export function EditModeSidebar({
     <aside className="sidebar edit-panel">
       {wrapSheet(
         <>
-      <h2 className="panel-title">고치기</h2>
+      <h2 className="panel-title">편집 모드</h2>
       {hint}
 
       {note ? (
