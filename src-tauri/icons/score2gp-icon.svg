@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="score2gp logo">
+  <g id="body" fill="none" stroke="#111111" stroke-linecap="round" stroke-linejoin="round">
+    <path id="body-outline" stroke-width="34" d="M410 185 C350 137 285 146 252 204 C222 257 244 321 265 378 C286 435 236 493 188 558 C155 630 151 711 176 790 C211 898 325 938 512 940 C695 938 808 899 846 790 C873 710 875 629 850 558 C820 491 751 437 769 385 C788 330 811 277 788 237 C769 203 733 207 711 247 C689 287 660 315 620 315"/>
+  </g>
+  <g id="strings" fill="none" stroke="#111111" stroke-width="34" stroke-linecap="round">
+    <path stroke-width="34" d="M474 132 L474 318"/>
+    <path stroke-width="34" d="M540 132 L540 318"/>
+  </g>
+  <g id="wordmark" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="62">
+    <path id="letter-s" stroke="#111111" d="M410 585 C404 544 378 522 343 522 C299 522 271 550 271 591 C271 633 303 651 347 669 C394 688 418 716 418 761 C418 814 385 846 340 846 C293 846 263 817 260 773"/>
+    <path id="number-2" stroke="#FF5A1F" d="M467 585 C472 544 500 522 536 522 C578 522 606 550 606 591 C606 627 586 654 557 690 L475 829 L612 829"/>
+    <path id="letter-g" stroke="#111111" d="M794 585 C781 545 752 522 713 522 C654 522 626 588 626 684 C626 784 654 846 713 846 C758 846 789 812 789 753 L789 702 L729 702"/>
+  </g>
+</svg>
