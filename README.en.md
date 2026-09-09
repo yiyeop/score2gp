@@ -3,9 +3,9 @@
 *[한국어](README.md) · English*
 
 **Turn PDF sheet music into sound.** Score2GP reads a PDF exported by notation
-software — picking up the tablature, rhythm and playing techniques — writes it
-out as a Guitar Pro file, and plays it back so you can practise along, the way
-Songsterr does.
+software — picking up the tablature, rhythm and playing techniques — and writes
+it out as a Guitar Pro file. The playback cursor follows the score and you can
+slow it down, so you can practise along.
 
 It reads **vector PDFs**: files produced by *Export as PDF* in Guitar Pro,
 Finale or MuseScore. Scans and photographs are not supported.

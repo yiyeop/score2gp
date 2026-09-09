@@ -3,7 +3,8 @@
 *한국어 · [English](README.en.md)*
 
 **PDF 악보를 소리로.** 악보 프로그램이 내보낸 PDF를 읽어 TAB·리듬·주법까지
-Guitar Pro 파일로 옮기고, Songsterr처럼 따라 들으며 연습하는 데스크톱 앱입니다.
+Guitar Pro 파일로 옮깁니다. 재생 위치를 악보에 짚어 주고 속도를 늦출 수 있어,
+그대로 따라 연습할 수 있습니다.
 
 읽을 수 있는 건 **벡터 PDF** — Guitar Pro·Finale·MuseScore에서 "PDF로 내보내기"한
 파일입니다. 스캔본이나 사진은 지원하지 않습니다.
