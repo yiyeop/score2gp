@@ -85,13 +85,19 @@ jobs:
         run: |
           cd tools/pdfextract
           python -m venv .venv
-          if [ -f .venv/bin/pip ]; then
-            PIP=.venv/bin/pip
+          if [ -x .venv/bin/python ]; then
+            PY=.venv/bin/python
           else
-            PIP=.venv/Scripts/pip.exe
+            PY=.venv/Scripts/python.exe
           fi
-          "$PIP" install --upgrade pip
-          "$PIP" install pymupdf pyguitarpro pyinstaller
+          # pip 실행 파일이 아니라 python -m pip 으로 부른다.
+          # 윈도우에서는 pip.exe 가 자기 자신을 덮어쓸 수 없어서
+          # `pip install --upgrade pip` 이 exit 1 로 죽는다:
+          #   ERROR: To modify pip, please run the following command:
+          #          ...\python.exe -m pip install --upgrade pip
+          # 세 OS 모두 python -m pip 은 문제없이 동작한다.
+          "$PY" -m pip install --upgrade pip
+          "$PY" -m pip install pymupdf pyguitarpro pyinstaller
 
       # tauri-action이 내부적으로 `tauri build`를 부르고, 그 전에 Tauri
       # 자신의 beforeBuildCommand(프런트엔드 빌드 + 사이드카 빌드)를 실행한다
