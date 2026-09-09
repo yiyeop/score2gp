@@ -8,9 +8,13 @@
 
 | 운영체제 | 받을 파일 |
 |---|---|
-| macOS (Apple Silicon) | `score2gp_*_aarch64.dmg` |
-| Windows | `score2gp_*_x64-setup.exe` |
-| Linux | `score2gp_*_amd64.AppImage` 또는 `score2gp_*_amd64.deb` |
+| macOS (Apple Silicon) | `.dmg` |
+| Windows | `-setup.exe` (또는 `.msi`) |
+| Linux | `.AppImage` (또는 `.deb`, `.rpm`) |
+
+운영체제마다 골라야 할 파일은 확장자로 하나씩 정해진다. 파일 이름에 붙는
+아키텍처 표기(`x64` `aarch64` 등)는 빌드 도구가 정하는 것이라 여기 적지
+않는다 — 적어 두면 도구가 표기를 바꿀 때 안내만 조용히 틀려진다.
 
 PDF 변환기는 앱 안에 함께 담겨 있다. 파이썬을 따로 깔 필요가 없다.
 
