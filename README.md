@@ -180,3 +180,4 @@ alphaTab 안쪽 사정이라 그대로 믿을 수 없어서, 짐작한 자리의
 
 - Node 20+, Rust 1.88+ (Tauri 의존성 요구)
 - Python 3.11+ (PDF 변환. 배포본 사용자에게는 필요 없다)
+# score2gp
