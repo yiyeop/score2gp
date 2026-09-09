@@ -2,6 +2,43 @@
 
 악보 PDF를 Guitar Pro 파일로 변환하고 Songsterr처럼 재생하는 데스크톱 앱 (Tauri 2 + React + alphaTab).
 
+## 설치
+
+### [⬇ 최신 버전 받기](https://github.com/yiyeop/score2gp/releases/latest)
+
+| 운영체제 | 받을 파일 |
+|---|---|
+| macOS (Apple Silicon) | `score2gp_*_aarch64.dmg` |
+| Windows | `score2gp_*_x64-setup.exe` |
+| Linux | `score2gp_*_amd64.AppImage` 또는 `score2gp_*_amd64.deb` |
+
+PDF 변환기는 앱 안에 함께 담겨 있다. 파이썬을 따로 깔 필요가 없다.
+
+> **macOS는 Apple Silicon(M1 이상) 전용이다.** Intel Mac에서는 Rosetta로도
+> 실행되지 않는다. 애플 메뉴 →  이 Mac에 관하여 → 칩이 `Apple M…`인지 확인하면 된다.
+
+### 처음 열 때 경고가 뜬다
+
+서명하지 않은 빌드라 운영체제가 막아선다. 한 번만 허용하면 그다음부터는 그냥 열린다.
+
+**macOS**
+
+1. 받은 `.dmg`를 열고 `score2gp`를 `Applications` 폴더로 끌어다 놓는다
+2. 앱을 실행하면 "열 수 없습니다"가 뜬다 — 일단 닫는다
+3. **시스템 설정 → 개인정보 보호 및 보안**을 열고 아래로 내려가면
+   `score2gp`이(가) 차단되었다는 줄이 있다. **그래도 열기**를 누른다
+4. 다시 실행하고 **열기**를 누른다
+
+터미널이 편하면 한 줄로도 된다.
+
+```bash
+xattr -dr com.apple.quarantine /Applications/score2gp.app
+```
+
+**Windows**
+
+SmartScreen이 "Windows의 PC 보호"를 띄우면 **추가 정보** → **실행**을 누른다.
+
 ## 실행
 
 ```bash
@@ -180,4 +217,3 @@ alphaTab 안쪽 사정이라 그대로 믿을 수 없어서, 짐작한 자리의
 
 - Node 20+, Rust 1.88+ (Tauri 의존성 요구)
 - Python 3.11+ (PDF 변환. 배포본 사용자에게는 필요 없다)
-# score2gp
