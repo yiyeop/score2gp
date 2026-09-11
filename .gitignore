@@ -37,7 +37,7 @@ tools/pdfextract/*.spec
 # tools/pdfextract/build-sidecar.sh 로 만든다.
 src-tauri/binaries/
 
-# 기획·티켓·에이전트 작업 상태 — GitHub에 공개하지 않는다(사용자 결정).
+# 로컬 기획 문서와 개발 도구의 작업 상태 — 저장소에 올리지 않는다.
 .prdt
 .claude
 docs
