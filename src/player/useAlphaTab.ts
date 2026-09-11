@@ -141,7 +141,8 @@ export function useAlphaTab() {
       },
       player: {
         playerMode: alphaTab.PlayerMode.EnabledAutomatic,
-        // 라이선스(Apache 2.0)와 출처는 같은 폴더의 LICENSE·README.md 에 있다.
+        // alphaTab 플러그인이 패키지에서 복사해 넣는 파일이다. 라이선스(Apache 2.0)와
+        // 출처는 함께 복사되는 LICENSE·README.md 에 있다.
         soundFont: "/soundfont/sonivox.sf3",
         scrollElement: viewportRef.current ?? undefined,
         scrollMode: alphaTab.ScrollMode.Continuous,
