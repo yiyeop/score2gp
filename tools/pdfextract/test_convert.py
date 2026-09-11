@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import os
 import unittest
 from pathlib import Path
 
@@ -48,7 +49,7 @@ class Inspect(unittest.TestCase):
     def test_reads_noteheads_drawn_as_shapes(self):
         """음표를 글자가 아닌 그림으로 저장한 PDF도 통과시킨다.
 
-        실제로 이런 악보가 있다(악보바다 계열). 글리프 코드가 없어도
+        실제로 이런 악보가 있다(시판 악보 일부). 글리프 코드가 없어도
         음표머리는 오선 간격에 맞춘 채워진 타원이라 크기로 알아볼 수 있다.
         여기서 막아버리면 읽을 수 있는 악보까지 못 열게 된다.
         """
@@ -77,9 +78,12 @@ class Inspect(unittest.TestCase):
         self.assertIn("변환할 수 없습니다", str(cm.exception))
 
     def test_a_real_score_passes(self):
-        sample = "/Users/yiyeop/Downloads/광인들 Lead and Rhytm full.pdf"
-        if not Path(sample).exists():
-            self.skipTest("샘플 악보가 없습니다")
+        # 실제 악보 PDF는 저작권이 있어 저장소에 넣지 않는다. 가진 샘플로
+        # 확인하려면 경로를 환경 변수로 넘긴다.
+        #   SCORE2GP_SAMPLE_PDF=/path/to/score.pdf python -m unittest test_convert
+        sample = os.environ.get("SCORE2GP_SAMPLE_PDF", "")
+        if not sample or not Path(sample).exists():
+            self.skipTest("SCORE2GP_SAMPLE_PDF 로 샘플 악보 경로를 지정하면 실행됩니다")
         inspect(sample)  # 예외가 나지 않아야 한다
 
     @classmethod
