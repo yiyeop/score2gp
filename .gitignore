@@ -41,3 +41,8 @@ src-tauri/binaries/
 .prdt
 .claude
 docs
+
+# alphaTab Vite 플러그인이 빌드·개발 서버를 시작할 때마다 node_modules에서
+# 복사해 넣는 폰트·사운드폰트. 생성물이라 커밋하지 않는다(vite.config.ts 참고).
+public/font/
+public/soundfont/
