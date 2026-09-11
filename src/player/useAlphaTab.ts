@@ -141,7 +141,8 @@ export function useAlphaTab() {
       },
       player: {
         playerMode: alphaTab.PlayerMode.EnabledAutomatic,
-        soundFont: "/soundfont.sf3",
+        // 라이선스(Apache 2.0)와 출처는 같은 폴더의 LICENSE·README.md 에 있다.
+        soundFont: "/soundfont/sonivox.sf3",
         scrollElement: viewportRef.current ?? undefined,
         scrollMode: alphaTab.ScrollMode.Continuous,
       },
