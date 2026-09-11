@@ -11,7 +11,7 @@ export interface AppModeDefinition {
   /**
    * 탭의 시각적 무게. "secondary"는 채워진 버튼 대신 아웃라인 스타일로
    * 낮은 무게를 갖는다 — "편집 모드"는 보정 전용 도구라 기본 모드인
-   * "읽기 모드"와 대등하게 보이면 안 된다(PRD "고치기 모드 이름과 위치").
+   * "읽기 모드"와 대등하게 보이면 안 된다.
    */
   tone?: "primary" | "secondary";
 }

@@ -68,8 +68,8 @@ function BpmControl({ player }: { player: PlayerHandle }) {
  * `display: contents`로 사라져서 기존처럼 한 행에 모든 그룹이 나란히
  * 놓인다. 모바일(<640px)에서는 CSS가 이 두 래퍼를 실제 2단으로 분리한다
  * — tier1(재생·정지·마디이동)은 화면 최하단에 항상 고정, tier2(속도·BPM·
- * 조옮김·볼륨·토글·도움말)는 `mobileTier2Open`일 때만 그 위로 펼쳐진다
- * (T-11). 열림 상태는 사이드바 시트와 "동시에 하나만" 규칙을 지켜야 해서
+ * 조옮김·볼륨·토글·도움말)는 `mobileTier2Open`일 때만 그 위로 펼쳐진다.
+ * 열림 상태는 사이드바 시트와 "동시에 하나만" 규칙을 지켜야 해서
  * 상위(`App.tsx`)가 소유한다.
  */
 export function TransportBar({

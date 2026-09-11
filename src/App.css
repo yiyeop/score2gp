@@ -969,13 +969,13 @@ kbd {
   color: var(--text-dim);
 }
 
-/* ── 반응형 (T-12) ──────────────────── */
-/* design.md "반응형 전략": 640px 브레이크포인트 하나로만 갈리는 두 개의
+/* ── 반응형 ──────────────────── */
+/* 반응형 전략: 640px 브레이크포인트 하나로만 갈리는 두 개의
    고정 타깃(데스크톱/모바일). 아래 "기본값(패스스루)" 규칙은 새로 추가된
    래퍼 엘리먼트(사이드바 탭바/시트, 트랜스포트 tier1/tier2 등)가 데스크톱
    에서는 완전히 투명하게 사라지도록 만든다 — `display: contents`로
    래퍼 자체를 렌더트리에서 지워서 기존 데스크톱 레이아웃이 한 줄도
-   바뀌지 않게 한다. 실제 모바일 레이아웃(T-11)은 뒤의 `@media`에서만
+   바뀌지 않게 한다. 실제 모바일 레이아웃은 뒤의 `@media`에서만
    적용된다. */
 
 .sidebar__tabbar,
@@ -1065,8 +1065,8 @@ kbd {
     /* `.transport`(tier1 고정 52px, tier2가 펼쳐지면 그만큼 더 큼) 바로
        위에 붙인다. `--mobile-transport-height`는 App.tsx가
        ResizeObserver로 `.transport`의 실제 렌더링 높이를 재 흘려보내는
-       값이라 tier2 유무에 따라 자동으로 따라간다(T-15 QA 재검수 1차 —
-       tier2가 펼쳐지면 이 탭바를 그대로 덮던 문제). */
+       값이라 tier2 유무에 따라 자동으로 따라간다 — tier2가
+       펼쳐지면 이 탭바를 그대로 덮던 문제를 막는다. */
     bottom: var(--mobile-transport-height, 52px);
     z-index: 15;
     width: auto;
@@ -1193,7 +1193,7 @@ kbd {
     bottom: 0;
     z-index: 16;
     /* tier1(재생/정지/마디이동)은 DOM상 tier2보다 앞이지만 항상 화면
-       최하단에 고정돼야 하고, tier2는 그 위로 펼쳐져야 한다(T-11 설계).
+       최하단에 고정돼야 하고, tier2는 그 위로 펼쳐져야 한다.
        DOM 순서를 바꾸지 않고 시각 순서만 뒤집는다. */
     flex-direction: column-reverse;
     align-items: stretch;

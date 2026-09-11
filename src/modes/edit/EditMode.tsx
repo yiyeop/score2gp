@@ -47,8 +47,7 @@ export function EditModeSidebar({
   ) : null;
 
   // 모바일 전용 — 데스크톱에서는 CSS로 항상 숨김. 화면이 좁으면 정밀
-  // 조작이 어렵다는 걸 막지 않고 안내만 한다(T-11 "고치기 모드는 어떻게
-  // 되나" 참고).
+  // 조작이 어렵다는 걸 막지 않고 안내만 한다.
   const mobileNarrowBanner = showMobileNarrowBanner ? (
     <button
       type="button"
@@ -263,7 +262,7 @@ export function EditModeSidebar({
 /**
  * 편집 모드 하단 바 — 이동, 되돌리기, 그리고 소리로 확인하기.
  *
- * 읽기 모드 `TransportBar`와 같은 tier1/tier2 경계를 그대로 적용한다(T-11)
+ * 읽기 모드 `TransportBar`와 같은 tier1/tier2 경계를 그대로 적용한다
  * — 재생/정지 + 스텝 이동이 tier1(상시 노출), 되돌리기/다시하기/상태
  * 텍스트가 tier2(모바일에서 접힘).
  */

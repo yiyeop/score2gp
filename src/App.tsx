@@ -88,8 +88,8 @@ function ExportMenu({
  * 헤더 케밥(⋯) 메뉴 — 모바일 전용(<640px, CSS로만 노출 전환).
  *
  * `header__actions`의 네 버튼을 세로 목록으로 옮긴 것으로, `ExportMenu`가
- * 이미 구현한 열림/백드롭/목록 패턴을 그대로 재사용한다(T-11 "새 드롭다운/
- * 오버레이 컴포넌트를 발명하지 않는다"). 악보가 없으면(`!player.score`)
+ * 이미 구현한 열림/백드롭/목록 패턴을 그대로 재사용한다 — 새 드롭다운·
+ * 오버레이 컴포넌트를 따로 만들지 않는다. 악보가 없으면(`!player.score`)
  * 렌더링하지 않는다 — 그 상태에서는 `.empty-state__actions`가 이미 같은
  * 액션을 본문 중앙에 제공한다.
  */
@@ -232,7 +232,7 @@ function App() {
   const [mobileEditBannerDismissed, setMobileEditBannerDismissed] = useState(false);
 
   // 모바일(<640px) 하단 시트/트랜스포트 tier 2 — 동시에 하나만 열린다는
-  // 규칙(T-11)을 지키려면 두 영역을 아우르는 단일 상태가 필요하다.
+  // 규칙을 지키려면 두 영역을 아우르는 단일 상태가 필요하다.
   // 데스크톱에서는 이 상태가 아무 CSS에도 영향을 주지 않는다(전부 모바일
   // 미디어쿼리 안에서만 쓰인다).
   const [mobilePanel, setMobilePanel] = useState<
@@ -252,7 +252,7 @@ function App() {
   // 바로 위에 붙어야 한다. tier2가 펼쳐지면 `.transport`의 실제 높이가
   // 내용에 따라 가변적으로(최대 40vh) 커지는데, 고정 오프셋(52px)으로는
   // 이를 따라가지 못해 사이드바 탭바가 tier2 밑에 가려지고 클릭도 tier2가
-  // 가로채는 문제가 있었다(T-15 QA 재검수 1차). `.transport`의 실제
+  // 가로채는 문제가 있었다. `.transport`의 실제
   // 렌더링 높이를 측정해 CSS 변수로 흘려보내 사이드바가 항상 그 위에
   // 붙게 한다 — tier1/tier2 어느 쪽이 열려 있든 값이 스스로 맞다.
   useEffect(() => {
@@ -273,7 +273,7 @@ function App() {
   // 내보낸 뒤 편집 모드에서 실제로 뭔가 바뀌면(되돌리기/다시하기 포함)
   // "내보냄 ✓" 표시가 최신 상태를 가리키지 않으므로 되돌린다.
   const editor = useScoreEditor(player, () => setSaved(false));
-  // 속도·조옮김·볼륨·탭 전용 보기를 파일(곡) 단위로 저장/복원한다 (T-8).
+  // 속도·조옮김·볼륨·탭 전용 보기를 파일(곡) 단위로 저장/복원한다.
   usePracticeSettingsPersistence(player, fileName);
 
   useShortcuts(
