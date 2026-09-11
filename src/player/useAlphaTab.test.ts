@@ -4,20 +4,19 @@ import React from "react";
 import { describe, expect, it, vi } from "vitest";
 
 /**
- * T-16: `setTabOnly`가 지금 값과 같은 값으로 불리면 `api.updateSettings()`/
- * `api.render()`를 다시 실행하면 안 된다(T-8의 파일별 설정 복원이 파일을 열
+ * `setTabOnly`가 지금 값과 같은 값으로 불리면 `api.updateSettings()`/
+ * `api.render()`를 다시 실행하면 안 된다(파일별 설정 복원이 파일을 열
  * 때마다 이 함수를 무조건 호출하는데, 매번 전체 재레이아웃이 걸리는 회귀였다).
  *
  * `useAlphaTab`은 마운트 시 실제 `@coderline/alphatab.AlphaTabApi`를 만들어
  * 캔버스 렌더링까지 들어가므로(폰트 로드, 오디오 컨텍스트 등) jsdom에서 그대로
  * 돌릴 수 없다. 이 훅의 다른 로직(로드, 트랙, 편집 연동 등)까지 전부 커버하려면
- * alphaTab API 표면 전체를 흉내 내야 해서 배보다 배꼽이 큰 반면, T-16이 고치는
+ * alphaTab API 표면 전체를 흉내 내야 해서 배보다 배꼽이 큰 반면, 여기서 고치는
  * 지점(`setTabOnly`의 no-op 가드)은 `AlphaTabApi`를 생성자·이벤트 등록·
  * `updateSettings`/`render` 호출만 가능한 최소 스텁으로 대체해도 정확히 검증할
  * 수 있다. 그래서 `@coderline/alphatab`을 이 최소 스텁으로 모킹하고, 실제 훅을
  * 컨테이너 엘리먼트에 마운트해 `setTabOnly`가 스텁의 `updateSettings`/`render`를
- * 언제 부르고 언제 안 부르는지를 확인하는 선에서 테스트 경계를 잡았다(T-10과
- * 같은 판단).
+ * 언제 부르고 언제 안 부르는지를 확인하는 선에서 테스트 경계를 잡았다.
  */
 
 // vi.mock 팩토리는 호이스팅되어 파일 맨 위에서 실행되므로, 팩토리가 참조하는
@@ -96,11 +95,11 @@ function mountHarness() {
   return { getHandle: () => handle!, api };
 }
 
-describe("setTabOnly no-op guard (T-16)", () => {
+describe("setTabOnly no-op guard", () => {
   it("does not call updateSettings/render when the value is unchanged", () => {
     const { getHandle, api } = mountHarness();
 
-    // 기본값이 false인데 같은 값(false)으로 호출 — T-8 복원 이펙트가 매번 하는 일
+    // 기본값이 false인데 같은 값(false)으로 호출 — 설정 복원 이펙트가 매번 하는 일
     act(() => {
       getHandle().setTabOnly(false);
     });

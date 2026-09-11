@@ -5,7 +5,7 @@ import { useScoreEditor } from "./useScoreEditor";
 import type { PlayerHandle } from "../../player/useAlphaTab";
 
 /**
- * T-10: "내보냄 ✓" 표시는 `useScoreEditor`가 실제로 악보를 바꿀 때(되돌리기/
+ * "내보냄 ✓" 표시는 `useScoreEditor`가 실제로 악보를 바꿀 때(되돌리기/
  * 다시하기 포함)만 다시 "안 내보냄" 상태로 돌아가야 한다. App.tsx는 이 훅에
  * `onEdit` 콜백을 넘겨 `saved`를 false로 되돌리는 방식으로 그 신호를 받는데,
  * App 전체를 렌더링하려면 alphaTab 플레이어·PDF 변환·파일 다이얼로그를 모두
