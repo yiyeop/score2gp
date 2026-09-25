@@ -9,10 +9,17 @@ name: release
 # arm64 바이너리는 Intel Mac에서 Rosetta로도 안 돌아가므로, 릴리스 노트에
 # 전용임을 명시한다(아래 releaseBody).
 #
-# v1은 코드 서명을 하지 않는다(인증서가 생기면 그때
-# signingIdentity/certificateThumbprint 등을 추가한다). 그래서 macOS는 실행
+# v1은 인증서로 서명하지 않는다(인증서가 생기면 그때
+# signingIdentity/certificateThumbprint 등을 바꾼다). 그래서 macOS는 실행
 # 시 "확인되지 않은 개발자" 경고가, Windows는 SmartScreen 경고가 뜬다 —
 # v1 범위에서는 감수하기로 했다.
+#
+# 단 macOS는 tauri.conf.json의 signingIdentity "-"로 번들 전체에 ad-hoc
+# 서명을 한다. 이게 없으면 실행 파일에 링커가 붙인 서명만 남아 번들 서명이
+# 깨지고, 받은 앱이 "손상되었기 때문에 열 수 없습니다"로 막힌다 — 이
+# 경우엔 "그래도 열기"도 나오지 않는다(v0.1.2까지의 배포본이 그랬다).
+# 서명하면 hardened runtime이 켜지므로 PyInstaller 사이드카가 파이썬
+# 라이브러리를 불러오도록 Entitlements.plist로 라이브러리 검증을 끈다.
 #
 # 사이드카(tools/pdfextract의 변환기)는 PyInstaller로 묶는데 크로스 컴파일이
 # 안 되므로 3개 러너(macos-14/windows-latest/ubuntu-latest)에서 각각 파이썬

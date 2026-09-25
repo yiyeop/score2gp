@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+    변환기 사이드카는 PyInstaller onefile이라, 실행할 때 파이썬 라이브러리를
+    임시 폴더에 풀어 불러온다. 서명하면 hardened runtime이 켜지는데, 그 상태로는
+    같은 Team ID로 서명된 라이브러리만 불러올 수 있다. ad-hoc 서명에는 Team ID가
+    없어서 "different Team IDs"로 로드가 막히고 변환이 바로 실패한다.
+    -->
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+</dict>
+</plist>
