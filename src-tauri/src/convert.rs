@@ -12,8 +12,10 @@
 //! - **개발 중**: 저장소의 `convert.py`. 고칠 때마다 다시 묶지 않아도 되도록
 //!   사이드카보다 먼저 본다.
 
+use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Output, Stdio};
+use std::time::{Duration, Instant};
 
 /// 변환 결과. 프론트엔드는 `output`을 read_score로 읽어 재생한다.
 #[derive(serde::Serialize)]
@@ -105,6 +107,61 @@ pub fn write_score(target: String, data: Vec<u8>) -> Result<(), String> {
     std::fs::write(&target, data).map_err(|e| format!("저장하지 못했습니다: {e}"))
 }
 
+/// 변환기를 이 시간까지만 기다린다.
+///
+/// 보통 몇십 초면 끝난다. 그런데 macOS가 사이드카 실행을 붙잡으면(번들
+/// 서명이 깨졌거나 격리 표시가 남은 경우) 프로세스가 코드 한 줄 돌기 전에
+/// 멈춰 영영 끝나지 않는다. 그때 화면이 무한히 기다리지 않게 끊는다.
+const CONVERT_TIMEOUT: Duration = Duration::from_secs(180);
+
+enum RunError {
+    Spawn(std::io::Error),
+    TimedOut,
+}
+
+/// `Command::output`과 같되, `timeout`이 지나면 프로세스를 죽이고 실패로 돌린다.
+///
+/// 출력은 별도 스레드에서 읽는다. 기다리기만 하면 변환기가 파이프 버퍼를
+/// 가득 채운 채 멈춰, 멀쩡한 변환도 시간 초과로 보이게 된다.
+fn run_with_timeout(mut command: Command, timeout: Duration) -> Result<Output, RunError> {
+    let mut child = command
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(RunError::Spawn)?;
+
+    let drain = |pipe: Option<Box<dyn Read + Send>>| {
+        std::thread::spawn(move || {
+            let mut buf = Vec::new();
+            if let Some(mut pipe) = pipe {
+                let _ = pipe.read_to_end(&mut buf);
+            }
+            buf
+        })
+    };
+    let stdout = drain(child.stdout.take().map(|p| Box::new(p) as Box<dyn Read + Send>));
+    let stderr = drain(child.stderr.take().map(|p| Box::new(p) as Box<dyn Read + Send>));
+
+    let deadline = Instant::now() + timeout;
+    let status = loop {
+        match child.try_wait().map_err(RunError::Spawn)? {
+            Some(status) => break status,
+            None if Instant::now() >= deadline => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return Err(RunError::TimedOut);
+            }
+            None => std::thread::sleep(Duration::from_millis(100)),
+        }
+    };
+
+    Ok(Output {
+        status,
+        stdout: stdout.join().unwrap_or_default(),
+        stderr: stderr.join().unwrap_or_default(),
+    })
+}
+
 /// 변환기가 남긴 오류를 사용자에게 보여줄 문장으로 다듬는다.
 ///
 /// 변환기는 '왜 안 되는지'를 아는 실패라면 그 이유만 짧게 적고 끝낸다.
@@ -191,14 +248,17 @@ pub fn convert_pdf(path: String) -> Result<ConvertResult, String> {
     if let Some(dir) = &tool.work_dir {
         command.current_dir(dir);
     }
-    let result = command
-        .args(&tool.args)
-        .arg(&source)
-        .arg(&output)
-        .output()
-        .map_err(|e| {
+    command.args(&tool.args).arg(&source).arg(&output);
+    let result = run_with_timeout(command, CONVERT_TIMEOUT).map_err(|e| match e {
+        RunError::Spawn(e) => {
             format!("변환기를 실행하지 못했습니다 ({}): {e}", tool.program.display())
-        })?;
+        }
+        RunError::TimedOut => format!(
+            "변환기가 {}초 안에 끝나지 않아 멈췄습니다.\n\
+             macOS가 변환기 실행을 막고 있을 수 있습니다 — README의 설치 안내를 확인해 주세요.",
+            CONVERT_TIMEOUT.as_secs()
+        ),
+    })?;
 
     let log = String::from_utf8_lossy(&result.stdout).to_string();
     if !result.status.success() {
@@ -363,5 +423,32 @@ mod tests {
         assert!(!shown.contains("Traceback"));
 
         assert!(!explain_failure("   ").is_empty());
+    }
+
+    /// 제때 끝나는 프로세스는 `Command::output`처럼 출력과 종료 코드를 준다.
+    #[cfg(unix)]
+    #[test]
+    fn runs_to_completion_within_the_timeout() {
+        let mut command = Command::new("sh");
+        command.args(["-c", "echo 나옴; echo 오류 >&2; exit 3"]);
+        let Ok(out) = run_with_timeout(command, Duration::from_secs(10)) else {
+            panic!("시간 안에 끝나야 한다");
+        };
+        assert_eq!(out.status.code(), Some(3));
+        assert_eq!(String::from_utf8_lossy(&out.stdout), "나옴\n");
+        assert_eq!(String::from_utf8_lossy(&out.stderr), "오류\n");
+    }
+
+    /// 멈춘 변환기는 끊어야 한다. 서명이 깨진 배포본에서 macOS가 사이드카를
+    /// 붙잡으면 앱이 무한히 기다렸다 (v0.1.2).
+    #[cfg(unix)]
+    #[test]
+    fn gives_up_on_a_stuck_process() {
+        let mut command = Command::new("sleep");
+        command.arg("30");
+        let started = Instant::now();
+        let result = run_with_timeout(command, Duration::from_millis(300));
+        assert!(matches!(result, Err(RunError::TimedOut)));
+        assert!(started.elapsed() < Duration::from_secs(5));
     }
 }
