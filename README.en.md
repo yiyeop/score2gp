@@ -49,6 +49,11 @@ If you prefer the terminal:
 xattr -dr com.apple.quarantine /Applications/score2gp.app
 ```
 
+**On v0.1.2 or earlier you may get "is damaged and can't be opened"** — those
+releases shipped with a broken bundle signature, so **Open Anyway** never
+appears. Don't move it to the Trash: close the dialog and use the terminal
+command above, or download a newer release.
+
 **Windows**
 
 When SmartScreen shows "Windows protected your PC", choose **More info** →
