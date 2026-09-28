@@ -81,7 +81,7 @@ const BANDS: { band: OnsetBand; centerHz: number; q: number; rise: number }[] = 
 ];
 
 const DEFAULTS: Required<OnsetDetectorOptions> = {
-  riseRatio: 2.2,
+  riseRatio: 2,
   lookBack: 0.06,
   floor: 0.0008,
   floorRatio: 0.6,

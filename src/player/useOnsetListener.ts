@@ -13,12 +13,15 @@ import { fitBeat, type BeatFit } from "../lib/beatFit";
  */
 
 /**
- * 박이 잡혔다고 볼 기준(0~1).
+ * 박이 잡혔다고 볼 기준(0~1) — 붙을 때와 놓을 때를 다르게 둔다.
  *
- * 격자에 얼마나 잘 얹혔는지를 보는 값이다. 사이사이 어택이 섞여도 0.6은
- * 넘고, 제각각인 소음은 0.5를 넘기기 어렵다.
+ * 격자에 얼마나 잘 얹혔는지를 보는 값인데, 실제 연주에서는 이 값이 50~60%
+ * 언저리에서 계속 오르내린다. 문턱이 하나면 그때마다 따라가기가 붙었다
+ * 떨어졌다 하면서 악보 속도가 흔들린다. 한 번 잡으면 확실히 나빠질 때까지
+ * 놓지 않는다.
  */
-const STEADY_FIT = 0.55;
+const STEADY_FIT_ON = 0.55;
+const STEADY_FIT_OFF = 0.4;
 
 /** 이 시간 동안 소리가 없으면 연주가 멈춘 것으로 보고 추정을 지운다. */
 const SILENCE_RESET = 3;
@@ -100,6 +103,9 @@ export function useOnsetListener(
   const [lastStrength, setLastStrength] = useState(0);
   const [level, setLevel] = useState(0);
   const [fit, setFit] = useState<BeatFit | null>(null);
+  const [steady, setSteady] = useState(false);
+  const steadyRef = useRef(false);
+  steadyRef.current = steady;
 
   const streamRef = useRef<MediaStream | null>(null);
   const contextRef = useRef<AudioContext | null>(null);
@@ -117,6 +123,7 @@ export function useOnsetListener(
     setListening(false);
     setStarting(false);
     setFit(null);
+    setSteady(false);
     setLastStrength(0);
     setLevel(0);
   }, []);
@@ -161,7 +168,12 @@ export function useOnsetListener(
             const last = hits[hits.length - 1] as Onset;
             setHitCount((n) => n + hits.length);
             setLastStrength(last.strength);
-            setFit(fitBeat(times, referenceBpmRef.current));
+            const next = fitBeat(times, referenceBpmRef.current);
+            setFit(next);
+            setSteady(
+              !!next &&
+                next.strength >= (steadyRef.current ? STEADY_FIT_OFF : STEADY_FIT_ON),
+            );
           } else if (
             times.length > 0 &&
             now - times[times.length - 1] > SILENCE_RESET
@@ -169,6 +181,7 @@ export function useOnsetListener(
             // 연주가 멎었다. 옛 타격으로 박을 우기지 않는다.
             timesRef.current = [];
             setFit(null);
+            setSteady(false);
           }
         };
 
@@ -209,8 +222,8 @@ export function useOnsetListener(
     lastStrength,
     level,
     fit,
-    bpm: fit && fit.strength >= STEADY_FIT ? fit.bpm : null,
-    steady: !!fit && fit.strength >= STEADY_FIT,
+    bpm: steady && fit ? fit.bpm : null,
+    steady,
     start,
     stop,
     toggle,
