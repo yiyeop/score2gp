@@ -277,7 +277,7 @@ function App() {
   usePracticeSettingsPersistence(player, fileName);
 
   useShortcuts(
-    buildReadShortcuts(player, () => setHelpOpen((v) => !v)),
+    buildReadShortcuts(player, follow, () => setHelpOpen((v) => !v)),
     mode === "read",
   );
   useShortcuts(

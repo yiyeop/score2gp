@@ -1,4 +1,5 @@
 import type { PlayerHandle } from "../../player/useAlphaTab";
+import type { BeatFollowHandle } from "../../player/useBeatFollow";
 import type { ShortcutMap } from "../../shortcuts/useShortcuts";
 
 export interface ShortcutDoc {
@@ -18,6 +19,7 @@ export const READ_SHORTCUT_DOCS: ShortcutDoc[] = [
   { keys: "[ / ]", label: "조옮김 반음 내리기 / 올리기" },
   { keys: "L", label: "전체 반복 켜기 / 끄기" },
   { keys: "M", label: "메트로놈 켜기 / 끄기" },
+  { keys: "K", label: "연주 감지 켜기 / 끄기" },
   { keys: "N", label: "타브만 보기 / 오선보 같이 보기" },
   { keys: "1 ~ 9", label: "해당 번호 트랙의 악보만 보기" },
   { keys: "0", label: "모든 트랙 악보 함께 보기" },
@@ -26,6 +28,7 @@ export const READ_SHORTCUT_DOCS: ShortcutDoc[] = [
 
 export function buildReadShortcuts(
   player: PlayerHandle,
+  follow: BeatFollowHandle,
   toggleHelp: () => void,
 ): ShortcutMap {
   // 숫자 키로 트랙 악보 전환 (1 = 첫 트랙, 0 = 전체)
@@ -52,6 +55,7 @@ export function buildReadShortcuts(
     "]": () => player.setTranspose(player.transpose + 1),
     L: () => player.toggleLoop(),
     M: () => player.toggleMetronome(),
+    K: () => follow.toggle(),
     N: () => player.toggleTabOnly(),
     "?": () => toggleHelp(),
   };
