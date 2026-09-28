@@ -13,15 +13,15 @@ import { fitBeat, FIT_WINDOW, type BeatFit, type BeatSample } from "../lib/beatF
  */
 
 /**
- * 박이 잡혔다고 볼 기준(0~1) — 붙을 때와 놓을 때를 다르게 둔다.
+ * 박이 잡혔다고 볼 기준 — 붙을 때와 놓을 때를 다르게 둔다.
  *
- * 격자에 얼마나 잘 얹혔는지를 보는 값인데, 실제 연주에서는 이 값이 50~60%
- * 언저리에서 계속 오르내린다. 문턱이 하나면 그때마다 따라가기가 붙었다
- * 떨어졌다 하면서 악보 속도가 흔들린다. 한 번 잡으면 확실히 나빠질 때까지
- * 놓지 않는다.
+ * 맞은 정도의 절대값이 아니라 '다른 빠르기보다 얼마나 두드러지는가'로 본다.
+ * 절대값은 마이크 거리와 방에 따라 몇 배씩 달라져서 기준으로 삼을 수 없다.
+ * 실제 연주에서는 이 값도 계속 오르내리므로, 한 번 잡으면 확실히 나빠질
+ * 때까지 놓지 않는다.
  */
-const STEADY_FIT_ON = 0.55;
-const STEADY_FIT_OFF = 0.4;
+const STEADY_SHARP_ON = 1.9;
+const STEADY_SHARP_OFF = 1.4;
 
 /**
  * 이보다 작게만 움직이면 연주가 멎은 것으로 본다.
@@ -200,7 +200,8 @@ export function useOnsetListener(
           setFit(next);
           setSteady(
             !!next &&
-              next.strength >= (steadyRef.current ? STEADY_FIT_OFF : STEADY_FIT_ON),
+              next.sharpness >=
+                (steadyRef.current ? STEADY_SHARP_OFF : STEADY_SHARP_ON),
           );
         };
 

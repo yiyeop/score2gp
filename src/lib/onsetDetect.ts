@@ -146,6 +146,7 @@ function createBand(
   let previous = 0;
   let level = 0;
   let baseline = -1;
+  let riseAverage = 0;
   const baselineAdapt = HOP / (BASELINE_TAU * sampleRate);
 
   return {
@@ -162,6 +163,7 @@ function createBand(
       previous = 0;
       level = 0;
       baseline = -1;
+      riseAverage = 0;
     },
     /** 한 표본을 대역 필터에 흘려 넣고 포락선을 갱신한다. */
     step(x0: number) {
@@ -197,7 +199,15 @@ function createBand(
       // 박을 맞출 때 쓰는 값. 문턱과 무관하게 '조금 전보다 얼마나 커졌는지'를
       // 그대로 둔다 — 묻힌 킥도 작게나마 근거가 된다. 기준선으로 나눠서
       // 마이크가 조용하든 크든 같은 크기로 들어오게 한다.
-      const rise = Math.max(0, rms - before) / Math.max(baseline, opt.floor);
+      //
+      // 여기서 평소 수준(riseAverage)을 빼는 것이 중요하다. 연주 중에는 어느
+      // 순간에나 소리가 조금씩 커지는데, 그 잔물결까지 더하면 진짜 박이 그
+      // 속에 묻힌다. 평소를 넘는 만큼만 남기고, 제곱해 봉우리를 도드라지게
+      // 한다.
+      const raw = Math.max(0, rms - before) / Math.max(baseline, opt.floor);
+      riseAverage += (raw - riseAverage) * baselineAdapt;
+      const excess = Math.max(0, raw - riseAverage);
+      const rise = excess * excess;
 
       previous = rms;
       return { hit, strength: Number.isFinite(ratio) ? ratio : threshold, rise };

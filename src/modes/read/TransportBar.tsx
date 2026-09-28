@@ -101,8 +101,10 @@ function FollowToggle({ follow }: { follow: BeatFollowHandle }) {
         // 아직 박을 못 읽었을 때는 잡은 횟수와 격자가 얼마나 맞았는지를
         // 보여준다 — 소리를 못 듣는 것인지, 듣기는 하는데 박으로 엮이지
         // 않는 것인지 이 두 숫자면 갈린다.
-        : `듣는 중 ${follow.hitCount}${
-            follow.fit ? ` · ${Math.round(follow.fit.strength * 100)}%` : ""
+        : `듣는 중${
+            follow.fit
+              ? ` ${Math.round(follow.fit.strength * 100)}% · ${follow.fit.sharpness.toFixed(1)}배`
+              : ` ${follow.hitCount}`
           }`
       : "연주 감지";
 

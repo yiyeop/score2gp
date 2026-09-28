@@ -38,6 +38,14 @@ export interface BeatFit {
    * 아무 데서나 커지면 0에 가깝다.
    */
   strength: number;
+  /**
+   * 다른 빠르기보다 얼마나 뾰족하게 두드러지는지(1이면 아무 데나 똑같다).
+   *
+   * 이 값으로 판단하는 이유는 절대값이 소리마다 다르기 때문이다. 같은 연주도
+   * 마이크가 멀면 0.2, 가까우면 0.6이 나오는데, '다른 후보들보다 얼마나
+   * 두드러지는가'는 그런 사정에 휘둘리지 않는다.
+   */
+  sharpness: number;
 }
 
 /** 격자를 맞출 때 보는 시간(초). 너무 길면 빨라진 뒤에도 옛 박을 붙잡는다. */
@@ -70,6 +78,7 @@ export function fitBeat(
   for (const s of recent) total += s.weight;
   if (total <= 0) return null;
 
+  const scores: number[] = [];
   let best: BeatFit | null = null;
   for (let i = 0; i <= STEPS; i++) {
     const bpm = referenceBpm * (1 - spread + (2 * spread * i) / STEPS);
@@ -83,12 +92,18 @@ export function fitBeat(
       im += s.weight * Math.sin(angle);
     }
     const strength = Math.hypot(re, im) / total;
+    scores.push(strength);
     if (!best || strength > best.strength) {
       let phase = Math.atan2(im, re) / (2 * Math.PI);
       if (phase < 0) phase += 1;
-      best = { bpm, phase, strength };
+      best = { bpm, phase, strength, sharpness: 1 };
     }
   }
+  if (!best) return null;
+
+  const sorted = [...scores].sort((a, b) => a - b);
+  const median = sorted[Math.floor(sorted.length / 2)];
+  best.sharpness = median > 0 ? best.strength / median : 1;
   return best;
 }
 
