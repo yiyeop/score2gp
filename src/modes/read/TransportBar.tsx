@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   ChevronDown,
   ChevronUp,
+  Circle,
   ListMusic,
   Metronome,
   Mic,
@@ -93,25 +94,29 @@ function BpmControl({ player }: { player: PlayerHandle }) {
 function FollowToggle({ follow }: { follow: BeatFollowHandle }) {
   // 마이크를 여는 동안에도 무슨 일이 일어나는지 알려준다 — 권한 대화상자가
   // 뜨면 몇 초씩 걸리는데, 그동안 버튼이 가만히 있으면 안 눌린 줄 안다.
-  const label = follow.captureLeft > 0
-    ? `녹음 중 ${Math.ceil(follow.captureLeft)}초`
-    : follow.starting
-    ? "마이크 여는 중…"
-    : follow.listening
-      ? follow.bpm
-        ? `${Math.round(follow.bpm)} BPM`
-        // 아직 박을 못 읽었을 때는 잡은 횟수와 격자가 얼마나 맞았는지를
-        // 보여준다 — 소리를 못 듣는 것인지, 듣기는 하는데 박으로 엮이지
-        // 않는 것인지 이 두 숫자면 갈린다.
-        : `듣는 중${
-            follow.fit
-              ? ` ${Math.round(follow.fit.strength * 100)}% · ${follow.fit.sharpness.toFixed(1)}배`
-              : ` ${follow.hitCount}`
-          }`
-      : "연주 감지";
+  const label =
+    follow.captureLeft > 0
+      ? `녹음 중 ${Math.ceil(follow.captureLeft)}초`
+      : follow.starting
+        ? "마이크 여는 중…"
+        : follow.listening
+          ? follow.bpm
+            ? `${Math.round(follow.bpm)} BPM`
+            : // 아직 박을 못 읽었을 때는 잡은 횟수와 격자가 얼마나 맞았는지를
+              // 보여준다 — 소리를 못 듣는 것인지, 듣기는 하는데 박으로 엮이지
+              // 않는 것인지 이 두 숫자면 갈린다.
+              `듣는 중${
+                follow.fit
+                  ? ` ${Math.round(follow.fit.strength * 100)}% · ${follow.fit.sharpness.toFixed(1)}배`
+                  : ` ${follow.hitCount}`
+              }`
+          : "연주 감지";
 
   // 크기는 로그로 눌러 담는다 — 소리는 작은 쪽에서 더 촘촘하게 움직인다.
-  const meter = Math.max(0, Math.min(1, (Math.log10(follow.level + 1e-4) + 3) / 2.2));
+  const meter = Math.max(
+    0,
+    Math.min(1, (Math.log10(follow.level + 1e-4) + 3) / 2.2),
+  );
 
   return (
     <button
@@ -184,6 +189,19 @@ export function TransportBar({
             ⏹
           </button>
           <FollowToggle follow={follow} />
+          <button
+            type="button"
+            className={`chip transport__kick${
+              follow.captureLeft > 0 ? " chip--active" : ""
+            }`}
+            onClick={follow.startCapture}
+            title="지금 들리는 소리를 20초 저장합니다 (R) — 감지가 어긋날 때 원인을 찾는 용도예요"
+          >
+            <Circle size={14} strokeWidth={2} />
+            {follow.captureLeft > 0
+              ? `${Math.ceil(follow.captureLeft)}초`
+              : "소리 저장"}
+          </button>
         </div>
 
         <div className="transport__group transport__bars">

@@ -139,6 +139,9 @@ export function useOnsetListener(
   const samplesRef = useRef<BeatSample[]>([]);
   const lastFitRef = useRef(0);
   const captureRef = useRef<Float32Array[] | null>(null);
+  const pendingCaptureRef = useRef(false);
+  // start()는 아래에서 정의되지만 startCapture에서 먼저 필요하다.
+  const startRef = useRef<() => void>(() => {});
   const [captureLeft, setCaptureLeft] = useState(0);
 
   const stop = useCallback(() => {
@@ -151,6 +154,7 @@ export function useOnsetListener(
     samplesRef.current = [];
     lastFitRef.current = 0;
     captureRef.current = null;
+    pendingCaptureRef.current = false;
     setCaptureLeft(0);
     setListening(false);
     setStarting(false);
@@ -260,6 +264,12 @@ export function useOnsetListener(
         nodeRef.current = node;
         setStarting(false);
         setListening(true);
+
+        if (pendingCaptureRef.current) {
+          pendingCaptureRef.current = false;
+          captureRef.current = [];
+          setCaptureLeft(CAPTURE_SECONDS);
+        }
       })
       .catch((err) => {
         setStarting(false);
@@ -269,10 +279,19 @@ export function useOnsetListener(
   }, [starting]);
 
   const startCapture = useCallback(() => {
-    if (!streamRef.current || captureRef.current) return;
+    if (captureRef.current) return;
+    if (!streamRef.current) {
+      // 마이크가 꺼져 있으면 먼저 켜고, 열리는 대로 녹음을 시작한다.
+      // 켜는 것을 따로 시키면 "왜 아무 일도 안 일어나지" 하고 지나치게 된다.
+      pendingCaptureRef.current = true;
+      startRef.current();
+      return;
+    }
     captureRef.current = [];
     setCaptureLeft(CAPTURE_SECONDS);
   }, []);
+
+  startRef.current = start;
 
   const toggle = useCallback(() => {
     if (listening || starting) stop();
