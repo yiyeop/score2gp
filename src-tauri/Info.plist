@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+    macOS는 마이크를 쓰겠다는 이유가 여기 적혀 있지 않으면 앱을 묻지도 않고
+    끝낸다(권한 대화상자에 이 문장이 그대로 뜬다). 이 파일은 Tauri가 빌드할 때
+    번들의 Info.plist에 합쳐 준다.
+    -->
+    <key>NSMicrophoneUsageDescription</key>
+    <string>드럼 킥 소리를 들어 악보가 연주를 따라가게 합니다. 소리를 저장하거나 밖으로 보내지 않습니다.</string>
+</dict>
+</plist>

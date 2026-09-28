@@ -10,5 +10,11 @@
     -->
     <key>com.apple.security.cs.disable-library-validation</key>
     <true/>
+    <!--
+    킥 감지 기능이 마이크를 연다. 서명된 앱은 이 권한이 없으면 입력 장치에
+    닿지 못한다 — 사용자에게 물어보는 대화상자조차 뜨지 않는다.
+    -->
+    <key>com.apple.security.device.audio-input</key>
+    <true/>
 </dict>
 </plist>
