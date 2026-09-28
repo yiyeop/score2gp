@@ -4,10 +4,12 @@ import {
   ChevronUp,
   ListMusic,
   Metronome,
+  Mic,
   Repeat,
   Timer,
 } from "lucide-react";
 import type { PlayerHandle } from "../../player/useAlphaTab";
+import type { KickListenerHandle } from "../../player/useKickListener";
 import {
   SPEED_MAX,
   SPEED_MIN,
@@ -79,13 +81,57 @@ function BpmControl({ player }: { player: PlayerHandle }) {
  * 열림 상태는 사이드바 시트와 "동시에 하나만" 규칙을 지켜야 해서
  * 상위(`App.tsx`)가 소유한다.
  */
+/**
+ * 드럼 킥을 듣는 토글.
+ *
+ * 재생 버튼 옆에 둔다 — 합주에서는 재생을 누르고 드럼의 카운트인을 기다리는
+ * 한 동작이라, 두 버튼이 떨어져 있으면 손이 두 번 간다. 킥이 잡힐 때마다
+ * 점이 한 번 번쩍여서, 마이크가 무엇을 듣고 있는지 눈으로 확인할 수 있다.
+ */
+function KickToggle({ kicks }: { kicks: KickListenerHandle }) {
+  const label = kicks.listening
+    ? kicks.bpm
+      ? `${Math.round(kicks.bpm)} BPM`
+      : "듣는 중"
+    : "킥 감지";
+
+  return (
+    <button
+      type="button"
+      className={`chip transport__kick${kicks.listening ? " chip--active" : ""}${
+        kicks.error ? " transport__kick--error" : ""
+      }`}
+      onClick={kicks.toggle}
+      aria-pressed={kicks.listening}
+      title={
+        kicks.error ??
+        "마이크로 드럼 킥을 들어 악보가 연주를 따라갑니다. 재생을 누르고 드럼 카운트인을 기다리세요."
+      }
+    >
+      <Mic size={16} strokeWidth={1.75} />
+      {label}
+      {kicks.listening && (
+        // key가 바뀌면 다시 붙으면서 애니메이션이 처음부터 재생된다.
+        <span
+          key={kicks.kickCount}
+          className={`transport__kick-dot${
+            kicks.steady ? " transport__kick-dot--steady" : ""
+          }`}
+        />
+      )}
+    </button>
+  );
+}
+
 export function TransportBar({
   player,
+  kicks,
   onToggleHelp,
   mobileTier2Open,
   onToggleMobileTier2,
 }: {
   player: PlayerHandle;
+  kicks: KickListenerHandle;
   onToggleHelp: () => void;
   mobileTier2Open: boolean;
   onToggleMobileTier2: () => void;
@@ -114,6 +160,7 @@ export function TransportBar({
           >
             ⏹
           </button>
+          <KickToggle kicks={kicks} />
         </div>
 
         <div className="transport__group transport__bars">

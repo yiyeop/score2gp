@@ -740,6 +740,47 @@ button.primary {
   font-weight: 500;
   padding: 5px 10px;
 }
+/* ── 킥 감지 토글 ───────────────────── */
+.transport__kick {
+  /* 재생·정지 버튼과 높이를 맞춘다. */
+  height: 32px;
+  padding: 0 10px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.transport__kick--error {
+  border-color: #d9534f;
+  color: #d9534f;
+}
+/* 킥이 잡힐 때마다 한 번 번쩍인다 — 마이크가 무엇을 듣는지 보이게. */
+.transport__kick-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #fff;
+  opacity: 0.25;
+  animation: kick-flash 260ms ease-out;
+}
+/* 박이 고르게 들어오면(따라갈 수 있는 상태) 색으로 구분한다. */
+.transport__kick-dot--steady {
+  background: #7CFC9B;
+}
+@keyframes kick-flash {
+  from {
+    opacity: 1;
+    transform: scale(1.8);
+  }
+  to {
+    opacity: 0.25;
+    transform: scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .transport__kick-dot {
+    animation: none;
+  }
+}
+
 .transport__help {
   margin-left: auto;
   width: 32px;
