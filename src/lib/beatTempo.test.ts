@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { beatSpread, estimateBpm } from "./kickTempo";
+import { beatSpread, estimateBpm, foldToReference } from "./beatTempo";
 
 /** start초부터 gap 간격으로 count개의 킥. jitter를 주면 사람처럼 흔들린다. */
 function beats(gap: number, count: number, start = 1, jitter = 0): number[] {
@@ -62,5 +62,41 @@ describe("beatSpread", () => {
 
   it("stays quiet until there are enough kicks", () => {
     expect(beatSpread([1, 1.5, 2])).toBeNull();
+  });
+});
+
+describe("foldToReference", () => {
+  it("keeps a tempo that already matches the score", () => {
+    expect(foldToReference(128, 125)).toBeCloseTo(128, 5);
+  });
+
+  it("doubles a half-beat reading back onto the score's tempo", () => {
+    // 반 박마다 소리가 나면 간격이 절반이라 두 배로 읽힌다.
+    expect(foldToReference(250, 125)).toBeCloseTo(125, 5);
+  });
+
+  it("halves a two-beat reading", () => {
+    expect(foldToReference(62, 125)).toBeCloseTo(124, 5);
+  });
+
+  it("accepts a live version played faster than the score", () => {
+    // 합주는 악보보다 빨라지기도 한다 — 10% 남짓은 그대로 받는다.
+    expect(foldToReference(138, 125)).toBeCloseTo(138, 5);
+  });
+
+  it("refuses a reading that is nowhere near the score", () => {
+    // 어느 배수로도 악보 근처에 못 오면 박을 잘못 짚은 것이다.
+    expect(foldToReference(93, 125)).toBeNull();
+  });
+});
+
+describe("estimateBpm with the score as a guide", () => {
+  it("folds an 8th-note pattern onto the score tempo", () => {
+    const times = beats(0.24, 8);
+    expect(estimateBpm(times, 125)).toBeCloseTo(125, 0);
+  });
+
+  it("gives nothing when the beat is nowhere near the score", () => {
+    expect(estimateBpm(beats(0.7, 8), 125)).toBeNull();
   });
 });

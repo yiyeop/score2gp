@@ -761,7 +761,22 @@ button.primary {
   opacity: 0.25;
   animation: kick-flash 260ms ease-out;
 }
-/* 박이 고르게 들어오면(따라갈 수 있는 상태) 색으로 구분한다. */
+/* 마이크에 들어오는 크기. 아무 소리도 안 잡히는지 눈으로 본다. */
+.transport__kick-meter {
+  width: 22px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.25);
+  overflow: hidden;
+}
+.transport__kick-meter > span {
+  display: block;
+  height: 100%;
+  background: #fff;
+  transition: width 80ms linear;
+}
+
+/* 박이 고르게 들어와 실제로 따라가는 중이면 색으로 구분한다. */
 .transport__kick-dot--steady {
   background: #7CFC9B;
 }

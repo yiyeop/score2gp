@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createKickDetector, type Kick } from "../lib/kickDetect";
-import { beatSpread, estimateBpm } from "../lib/kickTempo";
+import { createOnsetDetector, type Onset } from "../lib/onsetDetect";
+import { beatSpread, estimateBpm } from "../lib/beatTempo";
 
 /**
- * 마이크를 열어 드럼 킥을 듣는다.
+ * 마이크를 열어 연주를 듣는다.
  *
- * 감지 규칙은 [kickDetect]에, 빠르기 계산은 [kickTempo]에 있다. 여기서는
+ * 감지 규칙은 [onsetDetect]에, 빠르기 계산은 [beatTempo]에 있다. 여기서는
  * 브라우저 오디오와 React 상태만 잇는다 — 소리를 다루는 부분과 계산을
  * 떼어 둬야 계산 쪽을 테스트로 검증할 수 있다.
  *
@@ -15,23 +15,25 @@ import { beatSpread, estimateBpm } from "../lib/kickTempo";
 /** 박이 고르다고 볼 기준. 이보다 흩어져 있으면 연주가 아니라고 본다. */
 const STEADY_SPREAD = 0.18;
 
-/** 이 시간 동안 킥이 없으면 연주가 멈춘 것으로 보고 추정을 지운다. */
+/** 이 시간 동안 소리가 없으면 연주가 멈춘 것으로 보고 추정을 지운다. */
 const SILENCE_RESET = 3;
 
-/** 빠르기 추정에 쓰는 최근 킥 개수. */
+/** 빠르기 추정에 쓰는 최근 타격 개수. */
 const KEEP = 16;
 
-export interface KickListenerHandle {
+export interface OnsetListenerHandle {
   /** 마이크를 열어 듣고 있는지. */
   listening: boolean;
   /** 마이크를 여는 중(권한 대화상자가 떠 있을 수 있다). */
   starting: boolean;
   /** 열지 못한 이유. 사용자에게 그대로 보여줄 수 있는 문장. */
   error: string | null;
-  /** 켠 뒤 잡은 킥 수. 화면의 깜빡임을 이 값의 변화로 만든다. */
-  kickCount: number;
-  /** 마지막 킥의 세기(직전보다 몇 배). 없으면 0. */
+  /** 켠 뒤 잡은 타격 수. 화면의 깜빡임을 이 값의 변화로 만든다. */
+  hitCount: number;
+  /** 마지막 타격의 세기(직전보다 몇 배). 없으면 0. */
   lastStrength: number;
+  /** 마이크가 지금 듣고 있는 소리 크기(0~1). 잡히는 게 없는지 볼 때 쓴다. */
+  level: number;
   /** 지금 듣고 있는 연주의 빠르기. 아직 모르면 null. */
   bpm: number | null;
   /** 박이 고르게 들어오는지 — 따라가도 되는 상태인지 판단하는 값. */
@@ -56,28 +58,40 @@ function describeMicError(err: unknown): string {
   return `마이크를 열지 못했어요 (${(err as Error)?.message ?? String(err)})`;
 }
 
-export interface KickListenerOptions {
+export interface OnsetListenerOptions {
   /**
-   * 킥이 잡힐 때마다 부른다.
+   * 타격이 잡힐 때마다 부른다.
    *
-   * React 상태로 알리면 한 박자 늦는다 — 따라가기는 킥이 울린 바로 그때
+   * React 상태로 알리면 한 박자 늦는다 — 따라가기는 소리가 난 바로 그때
    * 커서 위치를 봐야 해서, 오디오 콜백에서 곧장 부른다.
    */
-  onKick?: (kick: Kick) => void;
+  onHit?: (onset: Onset) => void;
+  /**
+   * 지금 열린 악보에 적힌 빠르기(BPM).
+   *
+   * 들은 간격이 한 박인지 반 박인지는 소리만으로 가릴 수 없다. 같은 곡을
+   * 연주하는 중이니 악보의 빠르기가 가장 믿을 만한 기준이 된다.
+   */
+  referenceBpm?: number;
 }
 
-export function useKickListener(
-  options: KickListenerOptions = {},
-): KickListenerHandle {
+export function useOnsetListener(
+  options: OnsetListenerOptions = {},
+): OnsetListenerHandle {
   // 콜백은 매 렌더 바뀔 수 있으므로 최신 것을 ref로 들고 본다.
-  const onKickRef = useRef(options.onKick);
-  onKickRef.current = options.onKick;
+  const onHitRef = useRef(options.onHit);
+  onHitRef.current = options.onHit;
+
+  // 악보에 적힌 빠르기. 들은 간격이 한 박인지 반 박인지 가리는 기준이다.
+  const referenceBpmRef = useRef(0);
+  referenceBpmRef.current = options.referenceBpm ?? 0;
 
   const [listening, setListening] = useState(false);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [kickCount, setKickCount] = useState(0);
+  const [hitCount, setHitCount] = useState(0);
   const [lastStrength, setLastStrength] = useState(0);
+  const [level, setLevel] = useState(0);
   const [bpm, setBpm] = useState<number | null>(null);
   const [steady, setSteady] = useState(false);
 
@@ -99,6 +113,7 @@ export function useKickListener(
     setBpm(null);
     setSteady(false);
     setLastStrength(0);
+    setLevel(0);
   }, []);
 
   const start = useCallback(() => {
@@ -118,7 +133,7 @@ export function useKickListener(
       })
       .then((stream) => {
         const context = new AudioContext();
-        const detector = createKickDetector(context.sampleRate);
+        const detector = createOnsetDetector(context.sampleRate);
         const source = context.createMediaStreamSource(stream);
         // 1024 표본 = 48kHz에서 21ms. AudioWorklet으로 옮기면 더 매끄럽지만,
         // 먼저 실제 기기에서 마이크가 열리는지부터 확인하는 단계라 간단한
@@ -126,20 +141,22 @@ export function useKickListener(
         const node = context.createScriptProcessor(1024, 1, 1);
 
         node.onaudioprocess = (e) => {
-          const kicks = detector.push(e.inputBuffer.getChannelData(0));
+          const hits = detector.push(e.inputBuffer.getChannelData(0));
           const now = detector.elapsed;
           const times = timesRef.current;
 
-          if (kicks.length > 0) {
-            for (const kick of kicks) {
-              times.push(kick.time);
-              onKickRef.current?.(kick);
+          setLevel(detector.level);
+
+          if (hits.length > 0) {
+            for (const hit of hits) {
+              times.push(hit.time);
+              onHitRef.current?.(hit);
             }
             if (times.length > KEEP) times.splice(0, times.length - KEEP);
-            const last = kicks[kicks.length - 1] as Kick;
-            setKickCount((n) => n + kicks.length);
+            const last = hits[hits.length - 1] as Onset;
+            setHitCount((n) => n + hits.length);
             setLastStrength(last.strength);
-            setBpm(estimateBpm(times));
+            setBpm(estimateBpm(times, referenceBpmRef.current || undefined));
             const spread = beatSpread(times);
             setSteady(spread !== null && spread <= STEADY_SPREAD);
           } else if (
@@ -186,8 +203,9 @@ export function useKickListener(
     listening,
     starting,
     error,
-    kickCount,
+    hitCount,
     lastStrength,
+    level,
     bpm,
     steady,
     start,

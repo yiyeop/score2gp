@@ -212,7 +212,7 @@ function App() {
   // 악보 뷰(alphaTab)는 모드와 무관하게 App이 소유한다.
   // 모드 전환 시에도 로드된 악보와 재생 상태가 유지된다.
   const player = useAlphaTab();
-  const kicks = useBeatFollow(player);
+  const follow = useBeatFollow(player);
   const [mode, setMode] = useState<AppModeId>("read");
   const [helpOpen, setHelpOpen] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -538,7 +538,7 @@ function App() {
           <Timeline player={player} />
           <TransportBar
             player={player}
-            kicks={kicks}
+            follow={follow}
             onToggleHelp={() => setHelpOpen(true)}
             mobileTier2Open={mobilePanel?.kind === "tier2"}
             onToggleMobileTier2={toggleMobileTier2}

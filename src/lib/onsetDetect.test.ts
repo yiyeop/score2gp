@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createKickDetector } from "./kickDetect";
+import { createOnsetDetector } from "./onsetDetect";
 
 const RATE = 48000;
 
@@ -20,7 +20,7 @@ function track(times: number[], seconds = 4): Float32Array {
 }
 
 function detect(buf: Float32Array, options = {}) {
-  const d = createKickDetector(RATE, options);
+  const d = createOnsetDetector(RATE, options);
   return d.push(buf).map((k) => k.time);
 }
 
@@ -36,7 +36,7 @@ function expectKicksNear(found: number[], expected: number[]) {
   });
 }
 
-describe("createKickDetector", () => {
+describe("createOnsetDetector", () => {
   it("finds each kick in a steady four-on-the-floor bar", () => {
     // 120BPM 4분음표 = 0.5초 간격
     const times = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0];
@@ -92,7 +92,7 @@ describe("createKickDetector", () => {
   it("reads the same kicks whatever size the audio chunks arrive in", () => {
     const buf = track([0.5, 1.0, 1.5], 2);
     const whole = detect(buf);
-    const d = createKickDetector(RATE);
+    const d = createOnsetDetector(RATE);
     const piecemeal: number[] = [];
     for (let i = 0; i < buf.length; i += 333) {
       piecemeal.push(...d.push(buf.subarray(i, i + 333)).map((k) => k.time));
@@ -108,8 +108,36 @@ describe("createKickDetector", () => {
     expectKicksNear(detect(buf), [0.5, 1.0, 1.5, 2.0, 2.5]);
   });
 
+  it("hears a snare-range hit, not just the kick drum", () => {
+    // 스네어 몸통(200Hz 언저리)만 있는 백비트. 킥이 묻히는 합주에서도
+    // 박을 짚으려면 이쪽을 들어야 한다.
+    const buf = new Float32Array(RATE * 3);
+    const times = [0.6, 1.1, 1.6, 2.1];
+    for (const at of times) {
+      const start = Math.round(at * RATE);
+      for (let i = 0; i < RATE * 0.2 && start + i < buf.length; i++) {
+        const t = i / RATE;
+        buf[start + i] += 0.7 * Math.sin(2 * Math.PI * 205 * t) * Math.exp(-t * 30);
+      }
+    }
+    expectKicksNear(detect(buf), times);
+  });
+
+  it("counts one hit once even when both bands hear it", () => {
+    // 실제 킥에는 중역도 조금 섞여 있다. 두 대역이 함께 잡아도 한 번이다.
+    const buf = new Float32Array(RATE * 2);
+    const start = Math.round(0.8 * RATE);
+    for (let i = 0; i < RATE * 0.2; i++) {
+      const t = i / RATE;
+      buf[start + i] =
+        (0.9 * Math.sin(2 * Math.PI * 60 * t) + 0.5 * Math.sin(2 * Math.PI * 210 * t)) *
+        Math.exp(-t * 25);
+    }
+    expect(detect(buf)).toHaveLength(1);
+  });
+
   it("starts over after reset", () => {
-    const d = createKickDetector(RATE);
+    const d = createOnsetDetector(RATE);
     d.push(track([0.5], 1));
     expect(d.elapsed).toBeGreaterThan(0.9);
     d.reset();

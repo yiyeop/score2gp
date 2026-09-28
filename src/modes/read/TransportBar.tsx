@@ -82,46 +82,56 @@ function BpmControl({ player }: { player: PlayerHandle }) {
  * 상위(`App.tsx`)가 소유한다.
  */
 /**
- * 드럼 킥을 듣는 토글.
+ * 연주를 듣는 토글.
  *
  * 재생 버튼 옆에 둔다 — 합주에서는 재생을 누르고 드럼의 카운트인을 기다리는
- * 한 동작이라, 두 버튼이 떨어져 있으면 손이 두 번 간다. 킥이 잡힐 때마다
- * 점이 한 번 번쩍여서, 마이크가 무엇을 듣고 있는지 눈으로 확인할 수 있다.
+ * 한 동작이라, 두 버튼이 떨어져 있으면 손이 두 번 간다. 소리가 잡힐 때마다
+ * 점이 한 번 번쩍이고, 그 옆의 막대가 마이크에 들어오는 크기를 보여준다 —
+ * 아무 반응이 없을 때 '마이크가 안 잡는 것'인지 '박을 못 읽는 것'인지
+ * 구분할 수 있어야 한다.
  */
-function KickToggle({ kicks }: { kicks: BeatFollowHandle }) {
+function FollowToggle({ follow }: { follow: BeatFollowHandle }) {
   // 마이크를 여는 동안에도 무슨 일이 일어나는지 알려준다 — 권한 대화상자가
   // 뜨면 몇 초씩 걸리는데, 그동안 버튼이 가만히 있으면 안 눌린 줄 안다.
-  const label = kicks.starting
+  const label = follow.starting
     ? "마이크 여는 중…"
-    : kicks.listening
-      ? kicks.bpm
-        ? `${Math.round(kicks.bpm)} BPM`
+    : follow.listening
+      ? follow.bpm
+        ? `${Math.round(follow.bpm)} BPM`
         : "듣는 중"
-      : "킥 감지";
+      : "연주 감지";
+
+  // 크기는 로그로 눌러 담는다 — 소리는 작은 쪽에서 더 촘촘하게 움직인다.
+  const meter = Math.max(0, Math.min(1, (Math.log10(follow.level + 1e-4) + 3) / 2.2));
 
   return (
     <button
       type="button"
-      className={`chip transport__kick${kicks.listening ? " chip--active" : ""}${
-        kicks.error ? " transport__kick--error" : ""
+      className={`chip transport__kick${follow.listening ? " chip--active" : ""}${
+        follow.error ? " transport__kick--error" : ""
       }`}
-      onClick={kicks.toggle}
-      aria-pressed={kicks.listening}
+      onClick={follow.toggle}
+      aria-pressed={follow.listening}
       title={
-        kicks.error ??
-        "마이크로 드럼 킥을 들어 악보가 연주를 따라갑니다. 재생을 누르고 드럼 카운트인을 기다리세요."
+        follow.error ??
+        "마이크로 연주를 들어 악보가 따라갑니다. 재생을 누르고 드럼 카운트인을 기다리세요."
       }
     >
       <Mic size={16} strokeWidth={1.75} />
       {label}
-      {kicks.listening && (
-        // key가 바뀌면 다시 붙으면서 애니메이션이 처음부터 재생된다.
-        <span
-          key={kicks.kickCount}
-          className={`transport__kick-dot${
-            kicks.steady ? " transport__kick-dot--steady" : ""
-          }`}
-        />
+      {follow.listening && (
+        <>
+          {/* key가 바뀌면 다시 붙으면서 애니메이션이 처음부터 재생된다. */}
+          <span
+            key={follow.hitCount}
+            className={`transport__kick-dot${
+              follow.following ? " transport__kick-dot--steady" : ""
+            }`}
+          />
+          <span className="transport__kick-meter" aria-hidden="true">
+            <span style={{ width: `${Math.round(meter * 100)}%` }} />
+          </span>
+        </>
       )}
     </button>
   );
@@ -129,13 +139,13 @@ function KickToggle({ kicks }: { kicks: BeatFollowHandle }) {
 
 export function TransportBar({
   player,
-  kicks,
+  follow,
   onToggleHelp,
   mobileTier2Open,
   onToggleMobileTier2,
 }: {
   player: PlayerHandle;
-  kicks: BeatFollowHandle;
+  follow: BeatFollowHandle;
   onToggleHelp: () => void;
   mobileTier2Open: boolean;
   onToggleMobileTier2: () => void;
@@ -164,7 +174,7 @@ export function TransportBar({
           >
             ⏹
           </button>
-          <KickToggle kicks={kicks} />
+          <FollowToggle follow={follow} />
         </div>
 
         <div className="transport__group transport__bars">
