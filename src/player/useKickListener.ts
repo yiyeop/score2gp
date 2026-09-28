@@ -56,7 +56,23 @@ function describeMicError(err: unknown): string {
   return `마이크를 열지 못했어요 (${(err as Error)?.message ?? String(err)})`;
 }
 
-export function useKickListener(): KickListenerHandle {
+export interface KickListenerOptions {
+  /**
+   * 킥이 잡힐 때마다 부른다.
+   *
+   * React 상태로 알리면 한 박자 늦는다 — 따라가기는 킥이 울린 바로 그때
+   * 커서 위치를 봐야 해서, 오디오 콜백에서 곧장 부른다.
+   */
+  onKick?: (kick: Kick) => void;
+}
+
+export function useKickListener(
+  options: KickListenerOptions = {},
+): KickListenerHandle {
+  // 콜백은 매 렌더 바뀔 수 있으므로 최신 것을 ref로 들고 본다.
+  const onKickRef = useRef(options.onKick);
+  onKickRef.current = options.onKick;
+
   const [listening, setListening] = useState(false);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -115,7 +131,10 @@ export function useKickListener(): KickListenerHandle {
           const times = timesRef.current;
 
           if (kicks.length > 0) {
-            for (const kick of kicks) times.push(kick.time);
+            for (const kick of kicks) {
+              times.push(kick.time);
+              onKickRef.current?.(kick);
+            }
             if (times.length > KEEP) times.splice(0, times.length - KEEP);
             const last = kicks[kicks.length - 1] as Kick;
             setKickCount((n) => n + kicks.length);

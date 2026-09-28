@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Check, EllipsisVertical, TriangleAlert } from "lucide-react";
 import { useAlphaTab } from "./player/useAlphaTab";
-import { useKickListener } from "./player/useKickListener";
+import { useBeatFollow } from "./player/useBeatFollow";
 import { usePracticeSettingsPersistence } from "./player/usePracticeSettingsPersistence";
 import { useShortcuts } from "./shortcuts/useShortcuts";
 import { APP_MODES, type AppModeId } from "./modes/registry";
@@ -212,7 +212,7 @@ function App() {
   // 악보 뷰(alphaTab)는 모드와 무관하게 App이 소유한다.
   // 모드 전환 시에도 로드된 악보와 재생 상태가 유지된다.
   const player = useAlphaTab();
-  const kicks = useKickListener();
+  const kicks = useBeatFollow(player);
   const [mode, setMode] = useState<AppModeId>("read");
   const [helpOpen, setHelpOpen] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);

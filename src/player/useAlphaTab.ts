@@ -63,6 +63,15 @@ export interface TrackView {
   effects: string[];
 }
 
+/**
+ * 4분음표 하나의 tick 수 — 악보에서 읽지 못했을 때 쓰는 값.
+ *
+ * alphaTab의 고정 해상도(`MidiUtils.QuarterTime`)와 같지만, 그 상수는 공개
+ * API가 아니라 가져다 쓸 수 없다. 그래서 곡을 열 때 첫 마디의 길이와
+ * 박자표로 직접 재고, 잴 수 없을 때만 이 값으로 돌아간다.
+ */
+const QUARTER_TICKS_FALLBACK = 960;
+
 export const SPEED_MIN = 0.25;
 export const SPEED_MAX = 2;
 export const TRANSPOSE_MIN = -12;
@@ -81,6 +90,7 @@ export function useAlphaTab() {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const apiRef = useRef<alphaTab.AlphaTabApi | null>(null);
   const barStartsRef = useRef<number[]>([]);
+  const quarterTicksRef = useRef(QUARTER_TICKS_FALLBACK);
   const currentBarRef = useRef(0);
   // 구간 반복(마디 A-B)과 곡 전체 반복 토글은 alphaTab의 단일 `isLooping`
   // 플래그를 공유한다. 구간이 지정돼 있으면 항상 그 구간을 반복하고,
@@ -205,6 +215,19 @@ export function useAlphaTab() {
       const tc = api.tickCache;
       barStartsRef.current =
         s && tc ? s.masterBars.map((mb) => tc.getMasterBarStart(mb)) : [];
+
+      // 한 박이 몇 tick인지 첫 마디에서 직접 잰다. 3/4든 6/8이든 마디
+      // 길이와 박자표만 있으면 나온다.
+      const starts = barStartsRef.current;
+      const first = s?.masterBars[0];
+      if (starts.length >= 2 && first) {
+        const beatsInBar =
+          (first.timeSignatureNumerator * 4) / first.timeSignatureDenominator;
+        const measured = (starts[1] - starts[0]) / beatsInBar;
+        if (measured > 0) quarterTicksRef.current = measured;
+      } else {
+        quarterTicksRef.current = QUARTER_TICKS_FALLBACK;
+      }
     });
 
     api.playerReady.on(() => setIsPlayerReady(true));
@@ -420,6 +443,19 @@ export function useAlphaTab() {
     (delta: number) => goToBar(currentBarRef.current + delta),
     [goToBar],
   );
+
+  /**
+   * 커서가 지금 몇 번째 박에 있는지 (곡 시작 기준, 소수점 포함).
+   *
+   * 마이크로 들은 킥과 커서가 얼마나 어긋났는지 재는 데 쓴다. 마디 번호로는
+   * 마디 안 어디쯤인지 알 수 없어서 박 단위가 필요하다. alphaTab의 tick은
+   * 4분음표 하나가 960이다.
+   */
+  const getBeatPosition = useCallback(() => {
+    const api = apiRef.current;
+    if (!api) return 0;
+    return api.tickPosition / quarterTicksRef.current;
+  }, []);
 
   const setSpeed = useCallback((value: number) => {
     const api = apiRef.current;
@@ -753,6 +789,7 @@ export function useAlphaTab() {
     stop,
     goToBar,
     seekBars,
+    getBeatPosition,
     setSpeed,
     setBpm,
     exportAs,

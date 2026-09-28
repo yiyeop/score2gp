@@ -9,7 +9,7 @@ import {
   Timer,
 } from "lucide-react";
 import type { PlayerHandle } from "../../player/useAlphaTab";
-import type { KickListenerHandle } from "../../player/useKickListener";
+import type { BeatFollowHandle } from "../../player/useBeatFollow";
 import {
   SPEED_MAX,
   SPEED_MIN,
@@ -88,7 +88,7 @@ function BpmControl({ player }: { player: PlayerHandle }) {
  * 한 동작이라, 두 버튼이 떨어져 있으면 손이 두 번 간다. 킥이 잡힐 때마다
  * 점이 한 번 번쩍여서, 마이크가 무엇을 듣고 있는지 눈으로 확인할 수 있다.
  */
-function KickToggle({ kicks }: { kicks: KickListenerHandle }) {
+function KickToggle({ kicks }: { kicks: BeatFollowHandle }) {
   const label = kicks.listening
     ? kicks.bpm
       ? `${Math.round(kicks.bpm)} BPM`
@@ -131,7 +131,7 @@ export function TransportBar({
   onToggleMobileTier2,
 }: {
   player: PlayerHandle;
-  kicks: KickListenerHandle;
+  kicks: BeatFollowHandle;
   onToggleHelp: () => void;
   mobileTier2Open: boolean;
   onToggleMobileTier2: () => void;
