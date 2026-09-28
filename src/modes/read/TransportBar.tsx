@@ -89,11 +89,15 @@ function BpmControl({ player }: { player: PlayerHandle }) {
  * 점이 한 번 번쩍여서, 마이크가 무엇을 듣고 있는지 눈으로 확인할 수 있다.
  */
 function KickToggle({ kicks }: { kicks: BeatFollowHandle }) {
-  const label = kicks.listening
-    ? kicks.bpm
-      ? `${Math.round(kicks.bpm)} BPM`
-      : "듣는 중"
-    : "킥 감지";
+  // 마이크를 여는 동안에도 무슨 일이 일어나는지 알려준다 — 권한 대화상자가
+  // 뜨면 몇 초씩 걸리는데, 그동안 버튼이 가만히 있으면 안 눌린 줄 안다.
+  const label = kicks.starting
+    ? "마이크 여는 중…"
+    : kicks.listening
+      ? kicks.bpm
+        ? `${Math.round(kicks.bpm)} BPM`
+        : "듣는 중"
+      : "킥 감지";
 
   return (
     <button
