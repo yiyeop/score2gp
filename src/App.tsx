@@ -106,7 +106,6 @@ function HeaderMenu({
   hasConverted,
   saved,
   converting,
-  onDemo,
   onConvert,
   onOpen,
   onExport,
@@ -115,7 +114,6 @@ function HeaderMenu({
   hasConverted: boolean;
   saved: boolean;
   converting: boolean;
-  onDemo: () => void;
   onConvert: () => void;
   onOpen: () => void;
   onExport: (id: ExportFormatId) => void;
@@ -148,17 +146,6 @@ function HeaderMenu({
         <>
           <div className="export__backdrop" onClick={close} />
           <ul className="export__menu header-menu__list">
-            <li>
-              <button
-                type="button"
-                onClick={() => {
-                  close();
-                  onDemo();
-                }}
-              >
-                데모 곡 열기
-              </button>
-            </li>
             {isTauri() && (
               <li>
                 <button
@@ -420,9 +407,6 @@ function App() {
           </div>
         )}
         <div className="header__actions">
-          <button type="button" onClick={handleDemo}>
-            데모 곡
-          </button>
           {isTauri() && (
             <button type="button" onClick={handleConvert} disabled={converting}>
               {converting ? "변환 중…" : "PDF 변환"}
@@ -444,7 +428,6 @@ function App() {
           hasConverted={converted !== null}
           saved={saved}
           converting={converting}
-          onDemo={handleDemo}
           onConvert={handleConvert}
           onOpen={handleOpen}
           onExport={handleExport}
@@ -502,7 +485,7 @@ function App() {
                   </>
                 )}
                 <br />
-                처음이라면 <b>데모 곡</b> 버튼으로 바로 체험해보세요.
+                처음이라면 아래 <b>데모 곡 재생해보기</b>로 바로 체험해보세요.
               </p>
               <div className="empty-state__actions">
                 <button type="button" className="primary" onClick={handleOpen}>

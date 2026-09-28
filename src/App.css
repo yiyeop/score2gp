@@ -122,6 +122,9 @@ button.primary {
 .header__actions {
   display: flex;
   gap: 8px;
+  /* 악보가 없을 때는 가운데 제목(flex:1)이 렌더되지 않아 모드 탭 옆에
+     붙는다. 어느 쪽이든 오른쪽 끝에 두어 위치가 흔들리지 않게 한다. */
+  margin-left: auto;
 }
 
 /* ── 본문 ─────────────────────────── */
