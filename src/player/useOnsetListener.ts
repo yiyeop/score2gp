@@ -39,6 +39,9 @@ const QUIET = 0.05;
  */
 const REFIT_EVERY = 0.25;
 
+/** 진단용 녹음 길이(초). 박을 판단하려면 몇 마디는 있어야 한다. */
+const CAPTURE_SECONDS = 20;
+
 export interface OnsetListenerHandle {
   /** 마이크를 열어 듣고 있는지. */
   listening: boolean;
@@ -61,6 +64,15 @@ export interface OnsetListenerHandle {
   start: () => void;
   stop: () => void;
   toggle: () => void;
+  /**
+   * 들리는 소리를 그대로 몇십 초 담아 둔다(진단용).
+   *
+   * 박을 읽는 계산은 실제 연주 소리 앞에서만 정직하게 검증된다. 파일로 남겨
+   * 두면 같은 소리에 대고 몇 번이든 고쳐 볼 수 있다.
+   */
+  startCapture: () => void;
+  /** 녹음 중이면 남은 시간(초), 아니면 0. */
+  captureLeft: number;
 }
 
 /** 브라우저가 돌려주는 오류를 사람이 읽을 문장으로 바꾼다. */
@@ -86,6 +98,8 @@ export interface OnsetListenerOptions {
    * 커서 위치를 봐야 해서, 오디오 콜백에서 곧장 부른다.
    */
   onHit?: (onset: Onset) => void;
+  /** 녹음이 끝나면 담긴 소리를 넘긴다. */
+  onCaptured?: (samples: Float32Array, sampleRate: number) => void;
   /**
    * 지금 열린 악보에 적힌 빠르기(BPM).
    *
@@ -101,6 +115,8 @@ export function useOnsetListener(
   // 콜백은 매 렌더 바뀔 수 있으므로 최신 것을 ref로 들고 본다.
   const onHitRef = useRef(options.onHit);
   onHitRef.current = options.onHit;
+  const onCapturedRef = useRef(options.onCaptured);
+  onCapturedRef.current = options.onCaptured;
 
   // 악보에 적힌 빠르기. 들은 간격이 한 박인지 반 박인지 가리는 기준이다.
   const referenceBpmRef = useRef(0);
@@ -122,6 +138,8 @@ export function useOnsetListener(
   const nodeRef = useRef<ScriptProcessorNode | null>(null);
   const samplesRef = useRef<BeatSample[]>([]);
   const lastFitRef = useRef(0);
+  const captureRef = useRef<Float32Array[] | null>(null);
+  const [captureLeft, setCaptureLeft] = useState(0);
 
   const stop = useCallback(() => {
     nodeRef.current?.disconnect();
@@ -132,6 +150,8 @@ export function useOnsetListener(
     contextRef.current = null;
     samplesRef.current = [];
     lastFitRef.current = 0;
+    captureRef.current = null;
+    setCaptureLeft(0);
     setListening(false);
     setStarting(false);
     setFit(null);
@@ -165,7 +185,29 @@ export function useOnsetListener(
         const node = context.createScriptProcessor(1024, 1, 1);
 
         node.onaudioprocess = (e) => {
-          const { onsets, novelty } = detector.push(e.inputBuffer.getChannelData(0));
+          const input = e.inputBuffer.getChannelData(0);
+
+          // 진단용 녹음. 소리를 건드리기 전의 표본을 그대로 담는다.
+          const captured = captureRef.current;
+          if (captured) {
+            captured.push(new Float32Array(input));
+            const taken = captured.reduce((n, c) => n + c.length, 0);
+            const left = CAPTURE_SECONDS - taken / context.sampleRate;
+            setCaptureLeft(Math.max(0, left));
+            if (left <= 0) {
+              captureRef.current = null;
+              setCaptureLeft(0);
+              const all = new Float32Array(taken);
+              let at = 0;
+              for (const chunk of captured) {
+                all.set(chunk, at);
+                at += chunk.length;
+              }
+              onCapturedRef.current?.(all, context.sampleRate);
+            }
+          }
+
+          const { onsets, novelty } = detector.push(input);
           const now = detector.elapsed;
 
           setLevel(detector.level);
@@ -226,6 +268,12 @@ export function useOnsetListener(
       });
   }, [starting]);
 
+  const startCapture = useCallback(() => {
+    if (!streamRef.current || captureRef.current) return;
+    captureRef.current = [];
+    setCaptureLeft(CAPTURE_SECONDS);
+  }, []);
+
   const toggle = useCallback(() => {
     if (listening || starting) stop();
     else start();
@@ -247,5 +295,7 @@ export function useOnsetListener(
     start,
     stop,
     toggle,
+    startCapture,
+    captureLeft,
   };
 }

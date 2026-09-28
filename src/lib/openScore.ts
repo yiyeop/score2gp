@@ -103,6 +103,30 @@ export async function convertPdfFile(): Promise<
  * `content`가 파일 경로면 그 파일을 복사하고(변환기가 쓴 .gp5),
  * 바이트면 그대로 쓴다(alphaTab이 만들어낸 .gp·MIDI 등).
  */
+/**
+ * 바이트를 파일로 저장한다(저장 위치는 사용자가 고른다).
+ *
+ * 악보든 진단용 녹음이든 저장하는 절차는 같다.
+ */
+export async function saveBytesAs(
+  data: Uint8Array,
+  suggestedName: string,
+  format: { label: string; extension: string },
+): Promise<boolean> {
+  if (!isTauri()) throw new Error("저장은 앱에서만 됩니다");
+
+  const { save } = await import("@tauri-apps/plugin-dialog");
+  const { invoke } = await import("@tauri-apps/api/core");
+
+  const target = await save({
+    defaultPath: suggestedName,
+    filters: [{ name: format.label, extensions: [format.extension] }],
+  });
+  if (!target) return false;
+  await invoke("write_score", { target, data: Array.from(data) });
+  return true;
+}
+
 export async function saveScoreAs(
   content: string | Uint8Array,
   suggestedName: string,

@@ -20,6 +20,7 @@ export const READ_SHORTCUT_DOCS: ShortcutDoc[] = [
   { keys: "L", label: "전체 반복 켜기 / 끄기" },
   { keys: "M", label: "메트로놈 켜기 / 끄기" },
   { keys: "K", label: "연주 감지 켜기 / 끄기" },
+  { keys: "R", label: "듣고 있는 소리 20초 저장 (문제 보고용)" },
   { keys: "N", label: "타브만 보기 / 오선보 같이 보기" },
   { keys: "1 ~ 9", label: "해당 번호 트랙의 악보만 보기" },
   { keys: "0", label: "모든 트랙 악보 함께 보기" },
@@ -56,6 +57,7 @@ export function buildReadShortcuts(
     L: () => player.toggleLoop(),
     M: () => player.toggleMetronome(),
     K: () => follow.toggle(),
+    R: () => follow.startCapture(),
     N: () => player.toggleTabOnly(),
     "?": () => toggleHelp(),
   };

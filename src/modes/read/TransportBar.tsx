@@ -93,7 +93,9 @@ function BpmControl({ player }: { player: PlayerHandle }) {
 function FollowToggle({ follow }: { follow: BeatFollowHandle }) {
   // 마이크를 여는 동안에도 무슨 일이 일어나는지 알려준다 — 권한 대화상자가
   // 뜨면 몇 초씩 걸리는데, 그동안 버튼이 가만히 있으면 안 눌린 줄 안다.
-  const label = follow.starting
+  const label = follow.captureLeft > 0
+    ? `녹음 중 ${Math.ceil(follow.captureLeft)}초`
+    : follow.starting
     ? "마이크 여는 중…"
     : follow.listening
       ? follow.bpm

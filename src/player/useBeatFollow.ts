@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef } from "react";
 import { followSpeed, phaseErrorAt } from "../lib/beatFollow";
 import { offsetFromBeat, type BeatFit } from "../lib/beatFit";
+import { encodeWav } from "../lib/wav";
+import { saveBytesAs } from "../lib/openScore";
 import { SPEED_MAX, SPEED_MIN, type PlayerHandle } from "./useAlphaTab";
 import { useOnsetListener, type OnsetListenerHandle } from "./useOnsetListener";
 
@@ -60,7 +62,21 @@ export function useBeatFollow(player: PlayerHandle): BeatFollowHandle {
     if (phases.length > PHASE_WINDOW) phases.shift();
   }, []);
 
-  const onsets = useOnsetListener({ onHit, referenceBpm: player.baseTempo });
+  // 녹음이 끝나면 그 자리에서 저장 위치를 묻는다 — 파일이 어디 갔는지
+  // 찾아다니게 만들면 진단을 부탁하기 어려워진다.
+  const onCaptured = useCallback((samples: Float32Array, sampleRate: number) => {
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+    void saveBytesAs(encodeWav(samples, sampleRate), `score2gp-녹음-${stamp}.wav`, {
+      label: "WAV 소리 파일",
+      extension: "wav",
+    });
+  }, []);
+
+  const onsets = useOnsetListener({
+    onHit,
+    onCaptured,
+    referenceBpm: player.baseTempo,
+  });
   fitRef.current = onsets.fit;
 
   // 듣기를 멈추면 다음 연주를 위해 어긋남 기록을 비운다.
