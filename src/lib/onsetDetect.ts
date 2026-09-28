@@ -37,8 +37,16 @@ export interface OnsetDetectorOptions {
    * 아니므로 타격으로 보지 않는다.
    */
   lookBack?: number;
-  /** 이보다 조용하면 아무리 솟아도 무시한다(무음 구간의 헛detection 방지). */
+  /**
+   * 이보다 조용하면 아무리 솟아도 무시한다(무음 구간의 헛detection 방지).
+   *
+   * 마이크와 방에 따라 들어오는 크기가 수십 배씩 차이 나서, 고정값 하나로는
+   * 어떤 환경에서는 전부 놓치고 어떤 환경에서는 전부 잡는다. 그래서 이 값은
+   * 최소선일 뿐이고, 실제 기준은 최근 평균 크기에서 함께 따라간다.
+   */
   floor?: number;
+  /** 최근 평균 크기의 몇 배를 넘어야 하는지 — 위 floor와 함께 큰 쪽을 쓴다. */
+  floorRatio?: number;
   /**
    * 켠 직후 듣기만 하는 시간(초).
    *
@@ -73,12 +81,16 @@ const BANDS: { band: OnsetBand; centerHz: number; q: number; rise: number }[] = 
 ];
 
 const DEFAULTS: Required<OnsetDetectorOptions> = {
-  riseRatio: 2.6,
+  riseRatio: 2.2,
   lookBack: 0.06,
-  floor: 0.004,
+  floor: 0.0008,
+  floorRatio: 0.6,
   settle: 0.25,
   refractory: 0.09,
 };
+
+/** 기준선이 되는 평균을 따라가는 시간(초). 곡의 셈여림을 따라갈 만큼 느리게. */
+const BASELINE_TAU = 2;
 
 export interface OnsetDetector {
   /** 마이크에서 온 표본 덩어리를 넣고, 그 안에서 잡힌 타격을 받는다. */
@@ -118,6 +130,8 @@ function createBand(
   let heard = 0;
   let previous = 0;
   let level = 0;
+  let baseline = -1;
+  const baselineAdapt = HOP / (BASELINE_TAU * sampleRate);
 
   return {
     band: spec.band,
@@ -132,6 +146,7 @@ function createBand(
       heard = 0;
       previous = 0;
       level = 0;
+      baseline = -1;
     },
     /** 한 표본을 대역 필터에 흘려 넣고 포락선을 갱신한다. */
     step(x0: number) {
@@ -156,8 +171,13 @@ function createBand(
         return { hit: false, strength: 0 };
       }
 
+      // 기준선은 이 방에서 '보통 들리는 크기'다. 조용한 마이크에서도 같은
+      // 규칙이 서도록, 절대값과 상대값 중 큰 쪽을 문턱으로 쓴다.
+      baseline = baseline < 0 ? rms : baseline + (rms - baseline) * baselineAdapt;
+      const floor = Math.max(opt.floor, baseline * opt.floorRatio);
+
       const ratio = before > 0 ? rms / before : Number.POSITIVE_INFINITY;
-      const hit = rms > opt.floor && rms > previous && ratio >= threshold;
+      const hit = rms > floor && rms > previous && ratio >= threshold;
       previous = rms;
       return { hit, strength: Number.isFinite(ratio) ? ratio : threshold };
     },

@@ -98,7 +98,10 @@ function FollowToggle({ follow }: { follow: BeatFollowHandle }) {
     : follow.listening
       ? follow.bpm
         ? `${Math.round(follow.bpm)} BPM`
-        : "듣는 중"
+        // 아직 박을 못 읽었을 때는 잡은 횟수를 보여준다 — 소리를 못 듣는
+        // 것인지, 듣기는 하는데 박으로 엮이지 않는 것인지 갈라 보려면
+        // 이 숫자가 늘고 있는지만 보면 된다.
+        : `듣는 중 ${follow.hitCount}`
       : "연주 감지";
 
   // 크기는 로그로 눌러 담는다 — 소리는 작은 쪽에서 더 촘촘하게 움직인다.
