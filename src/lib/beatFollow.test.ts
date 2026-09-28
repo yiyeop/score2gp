@@ -11,8 +11,15 @@ const base = {
 
 describe("followSpeed", () => {
   it("matches the tempo the band is actually playing", () => {
-    // 악보는 100, 연주는 112 → 1.12배로 흐른다.
-    expect(followSpeed({ ...base, playedBpm: 112 })).toBeCloseTo(1.12, 5);
+    // 악보는 100, 연주는 108 → 1.08배로 흐른다.
+    expect(followSpeed({ ...base, playedBpm: 108 })).toBeCloseTo(1.08, 5);
+  });
+
+  it("refuses to run far away from the written tempo", () => {
+    // 합주가 악보보다 40% 빨라지는 일은 없다 — 박을 잘못 짚은 것이므로
+    // 12%까지만 따라간다.
+    expect(followSpeed({ ...base, playedBpm: 140 })).toBeCloseTo(1.12, 5);
+    expect(followSpeed({ ...base, playedBpm: 60 })).toBeCloseTo(0.88, 5);
   });
 
   it("keeps the written tempo while the beat is still unclear", () => {

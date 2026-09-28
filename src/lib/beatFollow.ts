@@ -17,6 +17,16 @@
 /** 한 번에 바꿀 수 있는 빠르기 폭. 이보다 크게 움직이면 눈에 띄게 튄다. */
 const MAX_TRIM = 0.12;
 
+/**
+ * 악보 빠르기에서 벗어날 수 있는 한계.
+ *
+ * 합주에서 빠르기는 한 번 잡히면 10% 안팎으로만 흔들린다. 들은 값이 그보다
+ * 멀다면 그건 연주가 빨라진 게 아니라 박을 잘못 짚은 것이다. 잘못 짚은 값을
+ * 그대로 따라가면 악보가 엉뚱한 속도로 달아나 연주자가 자리를 잃는다 —
+ * 따라가다 놓치는 것보다 나쁘다.
+ */
+const MAX_DRIFT = 0.12;
+
 /** 어긋남을 되돌리는 세기. 1이면 한 박 만에 다 따라잡으려 든다. */
 const PHASE_GAIN = 0.35;
 
@@ -57,7 +67,7 @@ export function followSpeed({
 }: FollowInput): number {
   if (!steady || playedBpm === null || scoreBpm <= 0) return 1;
 
-  const ratio = playedBpm / scoreBpm;
+  const ratio = clamp(playedBpm / scoreBpm, 1 - MAX_DRIFT, 1 + MAX_DRIFT);
 
   // 어긋난 만큼 빠르기를 잠깐 깎거나 더한다. 커서가 앞섰으면(양수) 늦춘다.
   const drift = Math.abs(phaseError) <= DEAD_ZONE ? 0 : phaseError;
