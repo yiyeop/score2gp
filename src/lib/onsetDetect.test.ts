@@ -21,7 +21,7 @@ function track(times: number[], seconds = 4): Float32Array {
 
 function detect(buf: Float32Array, options = {}) {
   const d = createOnsetDetector(RATE, options);
-  return d.push(buf).map((k) => k.time);
+  return d.push(buf).onsets.map((k) => k.time);
 }
 
 /**
@@ -95,7 +95,7 @@ describe("createOnsetDetector", () => {
     const d = createOnsetDetector(RATE);
     const piecemeal: number[] = [];
     for (let i = 0; i < buf.length; i += 333) {
-      piecemeal.push(...d.push(buf.subarray(i, i + 333)).map((k) => k.time));
+      piecemeal.push(...d.push(buf.subarray(i, i + 333)).onsets.map((k) => k.time));
     }
     expect(piecemeal).toEqual(whole);
   });

@@ -92,9 +92,24 @@ const DEFAULTS: Required<OnsetDetectorOptions> = {
 /** 기준선이 되는 평균을 따라가는 시간(초). 곡의 셈여림을 따라갈 만큼 느리게. */
 const BASELINE_TAU = 2;
 
+/** 한 블록에서 소리가 얼마나 커졌는지. 박을 맞추는 근거가 된다. */
+export interface Novelty {
+  time: number;
+  /** 커진 정도(0 이상). 대역 크기의 상대적 증가분이다. */
+  value: number;
+}
+
+/** 소리를 흘려 넣은 결과 — 눈에 보여줄 타격과, 박을 맞출 연속 신호. */
+export interface Listened {
+  /** 문턱을 넘긴 타격. 화면 표시용이다. */
+  onsets: Onset[];
+  /** 커진 정도의 흐름. 박자 격자는 이쪽으로 맞춘다. */
+  novelty: Novelty[];
+}
+
 export interface OnsetDetector {
-  /** 마이크에서 온 표본 덩어리를 넣고, 그 안에서 잡힌 타격을 받는다. */
-  push(samples: Float32Array): Onset[];
+  /** 마이크에서 온 표본 덩어리를 넣고, 들은 것을 받는다. */
+  push(samples: Float32Array): Listened;
   /** 다시 처음부터 듣는다(감지를 껐다 켤 때). */
   reset(): void;
   /** 지금까지 흘려보낸 시간(초). */
@@ -156,7 +171,7 @@ function createBand(
       envelope += (y0 * y0 - envelope) * envelopeAdapt;
     },
     /** 블록 경계에서 부른다 — 이 블록이 타격인지 판단한다. */
-    decide(): { hit: boolean; strength: number } {
+    decide(): { hit: boolean; strength: number; rise: number } {
       const rms = Math.sqrt(envelope);
       level = rms;
 
@@ -168,7 +183,7 @@ function createBand(
       if (heard < history.length) {
         heard++;
         previous = rms;
-        return { hit: false, strength: 0 };
+        return { hit: false, strength: 0, rise: 0 };
       }
 
       // 기준선은 이 방에서 '보통 들리는 크기'다. 조용한 마이크에서도 같은
@@ -178,8 +193,14 @@ function createBand(
 
       const ratio = before > 0 ? rms / before : Number.POSITIVE_INFINITY;
       const hit = rms > floor && rms > previous && ratio >= threshold;
+
+      // 박을 맞출 때 쓰는 값. 문턱과 무관하게 '조금 전보다 얼마나 커졌는지'를
+      // 그대로 둔다 — 묻힌 킥도 작게나마 근거가 된다. 기준선으로 나눠서
+      // 마이크가 조용하든 크든 같은 크기로 들어오게 한다.
+      const rise = Math.max(0, rms - before) / Math.max(baseline, opt.floor);
+
       previous = rms;
-      return { hit, strength: Number.isFinite(ratio) ? ratio : threshold };
+      return { hit, strength: Number.isFinite(ratio) ? ratio : threshold, rise };
     },
   };
 }
@@ -223,8 +244,9 @@ export function createOnsetDetector(
       blocks = 0;
       lastHit = Number.NEGATIVE_INFINITY;
     },
-    push(samples: Float32Array) {
+    push(samples: Float32Array): Listened {
       const onsets: Onset[] = [];
+      const novelty: Novelty[] = [];
       for (let i = 0; i < samples.length; i++) {
         for (const b of bands) b.step(samples[i]);
         if (++filled < HOP) continue;
@@ -233,8 +255,17 @@ export function createOnsetDetector(
 
         // 두 대역 모두 판정을 진행시킨다(하나만 보면 기준이 멈춘다).
         const verdicts = bands.map((b) => ({ band: b.band, ...b.decide() }));
-        if (time < opt.settle || time - lastHit < opt.refractory) continue;
+        if (time < opt.settle) continue;
 
+        // 커진 정도는 낮은 대역을 더 믿는다 — 박은 대개 거기서 또렷하다.
+        const rise =
+          verdicts.reduce(
+            (sum, v) => sum + v.rise * (v.band === "low" ? 1 : 0.6),
+            0,
+          ) / 1.6;
+        if (rise > 0) novelty.push({ time, value: rise });
+
+        if (time - lastHit < opt.refractory) continue;
         // 함께 잡혔으면 더 세게 솟은 쪽을 그 타격의 대표로 본다.
         const best = verdicts
           .filter((v) => v.hit)
@@ -244,7 +275,7 @@ export function createOnsetDetector(
         lastHit = time;
         onsets.push({ time, strength: best.strength, band: best.band });
       }
-      return onsets;
+      return { onsets, novelty };
     },
   };
 }

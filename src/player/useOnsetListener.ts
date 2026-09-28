@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createOnsetDetector, type Onset } from "../lib/onsetDetect";
-import { fitBeat, type BeatFit } from "../lib/beatFit";
+import { fitBeat, FIT_WINDOW, type BeatFit, type BeatSample } from "../lib/beatFit";
 
 /**
  * 마이크를 열어 연주를 듣는다.
@@ -23,11 +23,21 @@ import { fitBeat, type BeatFit } from "../lib/beatFit";
 const STEADY_FIT_ON = 0.55;
 const STEADY_FIT_OFF = 0.4;
 
-/** 이 시간 동안 소리가 없으면 연주가 멈춘 것으로 보고 추정을 지운다. */
-const SILENCE_RESET = 3;
+/**
+ * 이보다 작게만 움직이면 연주가 멎은 것으로 본다.
+ *
+ * 커진 정도는 기준선으로 나눈 값이라 방의 크기와 상관없이 비교할 수 있다.
+ * 조용한 방에서도 미세한 잡음은 늘 움직이므로, 그것까지 박으로 엮지 않는다.
+ */
+const QUIET = 0.15;
 
-/** 빠르기 추정에 쓰는 최근 타격 개수. */
-const KEEP = 16;
+/**
+ * 박을 다시 맞추는 간격(초).
+ *
+ * 매 블록(2.7ms)마다 맞추면 헛돈다. 사람의 빠르기는 그렇게 빨리 변하지 않아서
+ * 0.25초에 한 번이면 충분하고, 그 사이 들어온 소리는 다음 번에 함께 반영된다.
+ */
+const REFIT_EVERY = 0.25;
 
 export interface OnsetListenerHandle {
   /** 마이크를 열어 듣고 있는지. */
@@ -110,7 +120,8 @@ export function useOnsetListener(
   const streamRef = useRef<MediaStream | null>(null);
   const contextRef = useRef<AudioContext | null>(null);
   const nodeRef = useRef<ScriptProcessorNode | null>(null);
-  const timesRef = useRef<number[]>([]);
+  const samplesRef = useRef<BeatSample[]>([]);
+  const lastFitRef = useRef(0);
 
   const stop = useCallback(() => {
     nodeRef.current?.disconnect();
@@ -119,7 +130,8 @@ export function useOnsetListener(
     streamRef.current = null;
     void contextRef.current?.close();
     contextRef.current = null;
-    timesRef.current = [];
+    samplesRef.current = [];
+    lastFitRef.current = 0;
     setListening(false);
     setStarting(false);
     setFit(null);
@@ -153,36 +165,43 @@ export function useOnsetListener(
         const node = context.createScriptProcessor(1024, 1, 1);
 
         node.onaudioprocess = (e) => {
-          const hits = detector.push(e.inputBuffer.getChannelData(0));
+          const { onsets, novelty } = detector.push(e.inputBuffer.getChannelData(0));
           const now = detector.elapsed;
-          const times = timesRef.current;
 
           setLevel(detector.level);
 
-          if (hits.length > 0) {
-            for (const hit of hits) {
-              times.push(hit.time);
-              onHitRef.current?.(hit);
-            }
-            if (times.length > KEEP) times.splice(0, times.length - KEEP);
-            const last = hits[hits.length - 1] as Onset;
-            setHitCount((n) => n + hits.length);
+          // 박을 맞출 근거는 '커진 정도'의 흐름이다. 창 밖으로 나간 것은 버린다.
+          const samples = samplesRef.current;
+          for (const n of novelty) samples.push({ time: n.time, weight: n.value });
+          const cutoff = now - FIT_WINDOW;
+          let drop = 0;
+          while (drop < samples.length && samples[drop].time < cutoff) drop++;
+          if (drop > 0) samples.splice(0, drop);
+
+          if (onsets.length > 0) {
+            for (const onset of onsets) onHitRef.current?.(onset);
+            const last = onsets[onsets.length - 1] as Onset;
+            setHitCount((n) => n + onsets.length);
             setLastStrength(last.strength);
-            const next = fitBeat(times, referenceBpmRef.current);
-            setFit(next);
-            setSteady(
-              !!next &&
-                next.strength >= (steadyRef.current ? STEADY_FIT_OFF : STEADY_FIT_ON),
-            );
-          } else if (
-            times.length > 0 &&
-            now - times[times.length - 1] > SILENCE_RESET
-          ) {
-            // 연주가 멎었다. 옛 타격으로 박을 우기지 않는다.
-            timesRef.current = [];
+          }
+
+          if (now - lastFitRef.current < REFIT_EVERY) return;
+          lastFitRef.current = now;
+
+          const loudest = samples.reduce((m, s) => Math.max(m, s.weight), 0);
+          if (loudest < QUIET) {
+            // 아무도 연주하지 않는다. 옛 소리로 박을 우기지 않는다.
             setFit(null);
             setSteady(false);
+            return;
           }
+
+          const next = fitBeat(samples, referenceBpmRef.current);
+          setFit(next);
+          setSteady(
+            !!next &&
+              next.strength >= (steadyRef.current ? STEADY_FIT_OFF : STEADY_FIT_ON),
+          );
         };
 
         source.connect(node);
