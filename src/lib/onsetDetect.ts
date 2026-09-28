@@ -202,12 +202,15 @@ function createBand(
       //
       // 여기서 평소 수준(riseAverage)을 빼는 것이 중요하다. 연주 중에는 어느
       // 순간에나 소리가 조금씩 커지는데, 그 잔물결까지 더하면 진짜 박이 그
-      // 속에 묻힌다. 평소를 넘는 만큼만 남기고, 제곱해 봉우리를 도드라지게
-      // 한다.
+      // 속에 묻힌다. 평소를 넘는 만큼만 남긴다.
+      //
+      // 여기서 더 날카롭게(제곱) 만들면 남는 점이 너무 적어져, 이번에는 어떤
+      // 빠르기에도 그럭저럭 맞아 버린다 — 실제로 재보니 맞은 정도는 90%인데
+      // 어느 후보든 비슷해서 고를 수가 없었다. 점은 촘촘하게 두고 크기로만
+      // 차이를 둔다.
       const raw = Math.max(0, rms - before) / Math.max(baseline, opt.floor);
       riseAverage += (raw - riseAverage) * baselineAdapt;
-      const excess = Math.max(0, raw - riseAverage);
-      const rise = excess * excess;
+      const rise = Math.max(0, raw - riseAverage);
 
       previous = rms;
       return { hit, strength: Number.isFinite(ratio) ? ratio : threshold, rise };

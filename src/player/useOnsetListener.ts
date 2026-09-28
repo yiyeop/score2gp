@@ -20,8 +20,8 @@ import { fitBeat, FIT_WINDOW, type BeatFit, type BeatSample } from "../lib/beatF
  * 실제 연주에서는 이 값도 계속 오르내리므로, 한 번 잡으면 확실히 나빠질
  * 때까지 놓지 않는다.
  */
-const STEADY_SHARP_ON = 1.9;
-const STEADY_SHARP_OFF = 1.4;
+const STEADY_SHARP_ON = 1.8;
+const STEADY_SHARP_OFF = 1.3;
 
 /**
  * 이보다 작게만 움직이면 연주가 멎은 것으로 본다.
@@ -29,7 +29,7 @@ const STEADY_SHARP_OFF = 1.4;
  * 커진 정도는 기준선으로 나눈 값이라 방의 크기와 상관없이 비교할 수 있다.
  * 조용한 방에서도 미세한 잡음은 늘 움직이므로, 그것까지 박으로 엮지 않는다.
  */
-const QUIET = 0.15;
+const QUIET = 0.05;
 
 /**
  * 박을 다시 맞추는 간격(초).
