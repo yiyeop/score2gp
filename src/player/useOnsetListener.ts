@@ -1,19 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createOnsetDetector, type Onset } from "../lib/onsetDetect";
-import { beatSpread, estimateBpm } from "../lib/beatTempo";
+import { fitBeat, type BeatFit } from "../lib/beatFit";
 
 /**
  * 마이크를 열어 연주를 듣는다.
  *
- * 감지 규칙은 [onsetDetect]에, 빠르기 계산은 [beatTempo]에 있다. 여기서는
+ * 감지 규칙은 [onsetDetect]에, 박자 계산은 [beatFit]에 있다. 여기서는
  * 브라우저 오디오와 React 상태만 잇는다 — 소리를 다루는 부분과 계산을
  * 떼어 둬야 계산 쪽을 테스트로 검증할 수 있다.
  *
  * 녹음하지 않는다. 표본은 감지에 쓰고 바로 버리며, 어디로도 보내지 않는다.
  */
 
-/** 박이 고르다고 볼 기준. 이보다 흩어져 있으면 연주가 아니라고 본다. */
-const STEADY_SPREAD = 0.18;
+/**
+ * 박이 잡혔다고 볼 기준(0~1).
+ *
+ * 격자에 얼마나 잘 얹혔는지를 보는 값이다. 사이사이 어택이 섞여도 0.6은
+ * 넘고, 제각각인 소음은 0.5를 넘기기 어렵다.
+ */
+const STEADY_FIT = 0.55;
 
 /** 이 시간 동안 소리가 없으면 연주가 멈춘 것으로 보고 추정을 지운다. */
 const SILENCE_RESET = 3;
@@ -36,8 +41,10 @@ export interface OnsetListenerHandle {
   level: number;
   /** 지금 듣고 있는 연주의 빠르기. 아직 모르면 null. */
   bpm: number | null;
-  /** 박이 고르게 들어오는지 — 따라가도 되는 상태인지 판단하는 값. */
+  /** 박이 잡혔는지 — 따라가도 되는 상태인지 판단하는 값. */
   steady: boolean;
+  /** 지금 맞춘 박자 격자. 아직 못 맞췄으면 null. */
+  fit: BeatFit | null;
   start: () => void;
   stop: () => void;
   toggle: () => void;
@@ -92,8 +99,7 @@ export function useOnsetListener(
   const [hitCount, setHitCount] = useState(0);
   const [lastStrength, setLastStrength] = useState(0);
   const [level, setLevel] = useState(0);
-  const [bpm, setBpm] = useState<number | null>(null);
-  const [steady, setSteady] = useState(false);
+  const [fit, setFit] = useState<BeatFit | null>(null);
 
   const streamRef = useRef<MediaStream | null>(null);
   const contextRef = useRef<AudioContext | null>(null);
@@ -110,8 +116,7 @@ export function useOnsetListener(
     timesRef.current = [];
     setListening(false);
     setStarting(false);
-    setBpm(null);
-    setSteady(false);
+    setFit(null);
     setLastStrength(0);
     setLevel(0);
   }, []);
@@ -156,17 +161,14 @@ export function useOnsetListener(
             const last = hits[hits.length - 1] as Onset;
             setHitCount((n) => n + hits.length);
             setLastStrength(last.strength);
-            setBpm(estimateBpm(times, referenceBpmRef.current || undefined));
-            const spread = beatSpread(times);
-            setSteady(spread !== null && spread <= STEADY_SPREAD);
+            setFit(fitBeat(times, referenceBpmRef.current));
           } else if (
             times.length > 0 &&
             now - times[times.length - 1] > SILENCE_RESET
           ) {
-            // 연주가 멎었다. 옛 간격으로 빠르기를 우기지 않는다.
+            // 연주가 멎었다. 옛 타격으로 박을 우기지 않는다.
             timesRef.current = [];
-            setBpm(null);
-            setSteady(false);
+            setFit(null);
           }
         };
 
@@ -206,8 +208,9 @@ export function useOnsetListener(
     hitCount,
     lastStrength,
     level,
-    bpm,
-    steady,
+    fit,
+    bpm: fit && fit.strength >= STEADY_FIT ? fit.bpm : null,
+    steady: !!fit && fit.strength >= STEADY_FIT,
     start,
     stop,
     toggle,

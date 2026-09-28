@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef } from "react";
 import { followSpeed, phaseErrorAt } from "../lib/beatFollow";
+import { offsetFromBeat, type BeatFit } from "../lib/beatFit";
 import { SPEED_MAX, SPEED_MIN, type PlayerHandle } from "./useAlphaTab";
 import { useOnsetListener, type OnsetListenerHandle } from "./useOnsetListener";
 
 /**
  * 마이크로 들은 연주에 악보 커서를 맞춘다.
  *
- * 계산은 [beatFollow]·[beatTempo]에, 소리 입력은 [useOnsetListener]에 있다.
+ * 계산은 [beatFollow]·[beatFit]에, 소리 입력은 [useOnsetListener]에 있다.
  * 여기서는 "언제 맞출지"만 정한다 — 재생 중이고 감지를 켠 동안에만.
  *
  * 따라가는 동안 앱 소리는 꺼 둔다. 합주에서는 연주가 기준이라 앱까지 울리면
@@ -34,22 +35,33 @@ export interface BeatFollowHandle extends OnsetListenerHandle {
 export function useBeatFollow(player: PlayerHandle): BeatFollowHandle {
   const phasesRef = useRef<number[]>([]);
   const restoreVolumeRef = useRef<number | null>(null);
+  // 오디오 콜백에서 최신 격자를 보기 위한 통로.
+  const fitRef = useRef<BeatFit | null>(null);
+
+  /** 박 위에 떨어진 타격만 믿는다 — 이보다 벗어나면 사이에 낀 소리로 본다. */
+  const ON_BEAT = 0.25;
 
   // 오디오 콜백에서 최신 플레이어를 보기 위한 통로.
   const playerRef = useRef(player);
   playerRef.current = player;
 
-  const onHit = useCallback(() => {
+  const onHit = useCallback((onset: { time: number }) => {
     const p = playerRef.current;
-    if (!p.isPlaying) return;
+    const fit = fitRef.current;
+    if (!p.isPlaying || !fit) return;
 
-    // 타격은 박 위에 떨어진다고 보고, 커서가 그 박에서 얼마나 벗어났는지 모은다.
+    // 사이에 낀 어택(8비트의 '엔' 등)은 박을 말해 주지 않으므로 버린다.
+    // 이것들까지 세면 커서를 반 박씩 엉뚱하게 끌어당긴다.
+    if (Math.abs(offsetFromBeat(onset.time, fit)) > ON_BEAT) return;
+
+    // 박 위의 타격이 왔을 때 커서가 박에서 얼마나 벗어나 있는지 모은다.
     const phases = phasesRef.current;
     phases.push(phaseErrorAt(p.getBeatPosition()));
     if (phases.length > PHASE_WINDOW) phases.shift();
   }, []);
 
   const onsets = useOnsetListener({ onHit, referenceBpm: player.baseTempo });
+  fitRef.current = onsets.fit;
 
   // 듣기를 멈추면 다음 연주를 위해 어긋남 기록을 비운다.
   useEffect(() => {
