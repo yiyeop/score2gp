@@ -1,7 +1,6 @@
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import { alphaTab } from "@coderline/alphatab-vite";
-// @ts-expect-error node 타입(@types/node)을 두지 않아 선언이 없다. 실행은 Node라 된다.
 import { rmSync } from "node:fs";
 
 /**
@@ -31,7 +30,6 @@ function dropUnusedSoundFont(): Plugin {
   };
 }
 
-// @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vite.dev/config/
