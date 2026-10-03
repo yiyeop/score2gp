@@ -28,6 +28,10 @@ on:
   push:
     tags:
       - "v*"
+  # 태그를 밀지 않고도 빌드가 도는지 확인할 수 있게 열어 둔다. 수동 실행은
+  # 릴리스를 만들지 않고 세 플랫폼에서 빌드만 해 본다(아래 tagName 참고) —
+  # 빌드 환경이 깨졌는지는 배포 직전이 아니라 미리 알아야 한다.
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -120,7 +124,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ github.ref_name }}
+          # 태그로 들어온 실행만 릴리스를 만든다. 수동 실행은 이 값이 비어
+          # 있어서 tauri-action이 빌드만 하고 끝낸다.
+          tagName: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
           releaseName: "Score2GP ${{ github.ref_name }}"
           releaseBody: |
             Automated build.
