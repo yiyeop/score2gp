@@ -57,9 +57,9 @@ SmartScreen이 "Windows의 PC 보호"를 띄우면 **추가 정보** → **실�
 ## 실행
 
 ```bash
-npm install
-npm run tauri dev     # 데스크톱 앱
-npm run dev           # 브라우저에서 프론트만 (파일 열기는 <input> 폴백)
+pnpm install
+pnpm run tauri dev     # 데스크톱 앱
+pnpm run dev           # 브라우저에서 프론트만 (파일 열기는 <input> 폴백)
 ```
 
 PDF 변환까지 쓰려면 추출기의 파이썬 환경이 필요하다.
@@ -72,7 +72,7 @@ python3 -m venv .venv && .venv/bin/pip install pymupdf pyguitarpro pyinstaller
 ## 배포
 
 ```bash
-npm run tauri build   # .app과 .dmg가 src-tauri/target/release/bundle/ 에 생긴다
+pnpm run tauri build   # .app과 .dmg가 src-tauri/target/release/bundle/ 에 생긴다
 ```
 
 변환기는 PyInstaller로 실행 파일 하나(33MB)로 묶어 앱과 함께 담는다. 그래야

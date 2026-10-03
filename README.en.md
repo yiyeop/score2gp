@@ -62,9 +62,9 @@ When SmartScreen shows "Windows protected your PC", choose **More info** →
 ## Development
 
 ```bash
-npm install
-npm run tauri dev     # desktop app
-npm run dev           # front end only in a browser (file open falls back to <input>)
+pnpm install
+pnpm run tauri dev     # desktop app
+pnpm run dev           # front end only in a browser (file open falls back to <input>)
 ```
 
 PDF conversion additionally needs the extractor's Python environment:
@@ -77,7 +77,7 @@ python3 -m venv .venv && .venv/bin/pip install pymupdf pyguitarpro pyinstaller
 ## Building for distribution
 
 ```bash
-npm run tauri build   # .app and .dmg land in src-tauri/target/release/bundle/
+pnpm run tauri build   # .app and .dmg land in src-tauri/target/release/bundle/
 ```
 
 The converter is packed into a single executable (~33 MB) with PyInstaller and

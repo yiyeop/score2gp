@@ -5,17 +5,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 명령
 
 ```bash
-npm install
-npm run tauri dev           # 데스크톱 앱 (Tauri가 vite dev를 띄운다)
-npm run dev                 # 브라우저에서 프런트만 — 파일 열기는 <input> 폴백, Tauri 커맨드는 빠진다
-npm run build               # tsc + vite build (타입 오류가 곧 빌드 실패다)
-npm test                    # vitest run
-npx vitest run src/lib/loopRange.test.ts   # 한 파일만
-npx tsc --noEmit            # 타입만 확인
-npm run format              # prettier --write . (커밋 전에 돌린다)
-npm run format:check        # 고치지 않고 확인만
-npm run tauri build         # .app/.dmg → src-tauri/target/release/bundle/
+pnpm install
+pnpm run tauri dev          # 데스크톱 앱 (Tauri가 vite dev를 띄운다)
+pnpm run dev                # 브라우저에서 프런트만 — 파일 열기는 <input> 폴백, Tauri 커맨드는 빠진다
+pnpm run build              # tsc + vite build (타입 오류가 곧 빌드 실패다)
+pnpm test                   # vitest run
+pnpm exec vitest run src/lib/loopRange.test.ts   # 한 파일만
+pnpm exec tsc --noEmit      # 타입만 확인
+pnpm run format             # prettier --write . (커밋 전에 돌린다)
+pnpm run format:check       # 고치지 않고 확인만
+pnpm run tauri build        # .app/.dmg → src-tauri/target/release/bundle/
 ```
+
+패키지 매니저는 **pnpm**이다(`package.json`의 `packageManager`가 버전을 고정한다).
+`npm install`로 받으면 `pnpm-lock.yaml`과 어긋난 트리가 생기므로 쓰지 않는다.
 
 DOM이 필요한 테스트는 파일 첫 줄에 `// @vitest-environment jsdom`을 적는다(전역 설정이 없다).
 
@@ -35,7 +38,7 @@ python3 -m venv .venv && .venv/bin/pip install pymupdf pyguitarpro pyinstaller
 
 배포는 태그로 한다. `v*` 태그를 밀면 `.github/workflows/release.yml`이 macOS(Apple Silicon)·
 Windows·Linux를 빌드해 **초안** 릴리스에 붙인다. 버전은 `package.json`,
-`package-lock.json`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock`, `src-tauri/tauri.conf.json`
+`pnpm-lock.yaml`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock`, `src-tauri/tauri.conf.json`
 다섯 곳을 함께 올려야 한다.
 
 ## 프로젝트 구조
@@ -95,11 +98,11 @@ adr/                  방향을 바꾼 결정과 그 이유
 ## 코드 스타일
 
 형식은 Prettier가 정한다(80칸, 큰따옴표, 세미콜론, 후행 쉼표). 손으로 맞추지 말고
-**커밋 전에 `npm run format`을 돌린다.** 설정은 `.prettierrc.json`에 있다.
+**커밋 전에 `pnpm run format`을 돌린다.** 설정은 `.prettierrc.json`에 있다.
 
 Prettier가 정해 주지 않는 것들:
 
-- **TypeScript**: `strict`가 켜져 있고 `npm run build`가 `tsc`를 먼저 돌리므로 타입 오류는
+- **TypeScript**: `strict`가 켜져 있고 `pnpm run build`가 `tsc`를 먼저 돌리므로 타입 오류는
   곧 빌드 실패다. 타입만 가져올 때는 `import type`을 쓴다. `any`로 덮지 말고, 외부 라이브러리가
   타입을 주지 않으면 그 한 줄만 `@ts-expect-error`로 막고 이유를 적는다.
 - **React**: 함수 컴포넌트와 훅만 쓴다. 상태를 다루는 로직은 `use*` 훅으로 빼고, 컴포넌트는
@@ -122,7 +125,7 @@ Prettier가 정해 주지 않는 것들:
   다음 사람이 같은 함정을 다시 밟지 않게 하는 내용을 남긴다. 주석과 문서는 한국어다.
 - **공개 저장소에 실제 곡명을 넣지 않는다.** 샘플은 `악보 A`, `악보 B`처럼 부르고, 경로는
   환경 변수로 받는다.
-- 커밋 전에 `npm run format`을 돌린다. 저장소 전체가 아직 포맷되어 있지 않으므로, 고친 파일이
+- 커밋 전에 `pnpm run format`을 돌린다. 저장소 전체가 아직 포맷되어 있지 않으므로, 고친 파일이
   함께 정리되는 정도는 자연스럽다.
 - **커밋 메시지 접두사**: `feat`(기능) / `fix`(버그) / `style`(형식·문구) / `refact`(리팩터링) /
   `chore`(빌드·의존성·설정) / `docs`(문서) / `test`(테스트). 파일명 변경은 `git mv`로 하고
