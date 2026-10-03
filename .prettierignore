@@ -1,0 +1,8 @@
+dist
+src-tauri/target
+src-tauri/gen
+public/font
+public/soundfont
+package-lock.json
+tools/pdfextract/build
+tools/pdfextract/dist
