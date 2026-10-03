@@ -6,3 +6,4 @@ public/soundfont
 pnpm-lock.yaml
 tools/pdfextract/build
 tools/pdfextract/dist
+LICENSE
