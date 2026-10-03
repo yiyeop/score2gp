@@ -25,7 +25,12 @@ describe.skipIf(!wavPath)("실제 녹음", () => {
     const all: BeatSample[] = [];
     let onsetCount = 0;
     const CHUNK = 1024;
-    const readings: { at: number; bpm: number; strength: number; sharp: number }[] = [];
+    const readings: {
+      at: number;
+      bpm: number;
+      strength: number;
+      sharp: number;
+    }[] = [];
 
     for (let i = 0; i < samples.length; i += CHUNK) {
       const { onsets, novelty } = detector.push(samples.subarray(i, i + CHUNK));
@@ -33,7 +38,11 @@ describe.skipIf(!wavPath)("실제 녹음", () => {
       for (const n of novelty) all.push({ time: n.time, weight: n.value });
 
       const now = detector.elapsed;
-      if (now >= 6 && Math.abs(now % 1) < 0.03 && readings[readings.length - 1]?.at !== Math.floor(now)) {
+      if (
+        now >= 6 &&
+        Math.abs(now % 1) < 0.03 &&
+        readings[readings.length - 1]?.at !== Math.floor(now)
+      ) {
         const recent = all.filter((s) => now - s.time <= 6);
         const fit = fitBeat(recent, scoreBpm, 0.35);
         if (fit) {
@@ -47,7 +56,9 @@ describe.skipIf(!wavPath)("실제 녹음", () => {
       }
     }
 
-    console.log(`길이 ${(samples.length / sampleRate).toFixed(1)}초 · 표본율 ${sampleRate}`);
+    console.log(
+      `길이 ${(samples.length / sampleRate).toFixed(1)}초 · 표본율 ${sampleRate}`,
+    );
     console.log(`문턱을 넘긴 타격 ${onsetCount}개 · 근거 점 ${all.length}개`);
     if (trueBpm) console.log(`정답으로 본 빠르기 ${trueBpm} BPM`);
     for (const r of readings) {

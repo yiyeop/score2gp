@@ -75,10 +75,11 @@ const HOP = 128;
 const ENVELOPE_TAU = 0.01;
 
 /** 대역별 설정. 중간 대역은 소리가 더 촘촘해 조금 더 엄격하게 본다. */
-const BANDS: { band: OnsetBand; centerHz: number; q: number; rise: number }[] = [
-  { band: "low", centerHz: 65, q: 0.9, rise: 1 },
-  { band: "mid", centerHz: 200, q: 0.8, rise: 1.15 },
-];
+const BANDS: { band: OnsetBand; centerHz: number; q: number; rise: number }[] =
+  [
+    { band: "low", centerHz: 65, q: 0.9, rise: 1 },
+    { band: "mid", centerHz: 200, q: 0.8, rise: 1.15 },
+  ];
 
 const DEFAULTS: Required<OnsetDetectorOptions> = {
   riseRatio: 2,
@@ -139,7 +140,10 @@ function createBand(
   );
   const threshold = opt.riseRatio * spec.rise;
 
-  let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+  let x1 = 0,
+    x2 = 0,
+    y1 = 0,
+    y2 = 0;
   let envelope = 0;
   let historyAt = 0;
   let heard = 0;
@@ -168,8 +172,10 @@ function createBand(
     /** 한 표본을 대역 필터에 흘려 넣고 포락선을 갱신한다. */
     step(x0: number) {
       const y0 = b0 * x0 + b2 * x2 - a1 * y1 - a2 * y2;
-      x2 = x1; x1 = x0;
-      y2 = y1; y1 = y0;
+      x2 = x1;
+      x1 = x0;
+      y2 = y1;
+      y1 = y0;
       envelope += (y0 * y0 - envelope) * envelopeAdapt;
     },
     /** 블록 경계에서 부른다 — 이 블록이 타격인지 판단한다. */
@@ -190,7 +196,8 @@ function createBand(
 
       // 기준선은 이 방에서 '보통 들리는 크기'다. 조용한 마이크에서도 같은
       // 규칙이 서도록, 절대값과 상대값 중 큰 쪽을 문턱으로 쓴다.
-      baseline = baseline < 0 ? rms : baseline + (rms - baseline) * baselineAdapt;
+      baseline =
+        baseline < 0 ? rms : baseline + (rms - baseline) * baselineAdapt;
       const floor = Math.max(opt.floor, baseline * opt.floorRatio);
 
       const ratio = before > 0 ? rms / before : Number.POSITIVE_INFINITY;
@@ -213,7 +220,11 @@ function createBand(
       const rise = Math.max(0, raw - riseAverage);
 
       previous = rms;
-      return { hit, strength: Number.isFinite(ratio) ? ratio : threshold, rise };
+      return {
+        hit,
+        strength: Number.isFinite(ratio) ? ratio : threshold,
+        rise,
+      };
     },
   };
 }

@@ -778,7 +778,7 @@ button.primary {
 
 /* 박이 고르게 들어와 실제로 따라가는 중이면 색으로 구분한다. */
 .transport__kick-dot--steady {
-  background: #7CFC9B;
+  background: #7cfc9b;
 }
 @keyframes kick-flash {
   from {

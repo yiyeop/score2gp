@@ -11,14 +11,18 @@
  */
 
 /** Float32 표본(-1~1)을 16비트 모노 WAV 바이트로 만든다. */
-export function encodeWav(samples: Float32Array, sampleRate: number): Uint8Array {
+export function encodeWav(
+  samples: Float32Array,
+  sampleRate: number,
+): Uint8Array {
   const bytesPerSample = 2;
   const dataBytes = samples.length * bytesPerSample;
   const buffer = new ArrayBuffer(44 + dataBytes);
   const view = new DataView(buffer);
 
   const ascii = (offset: number, text: string) => {
-    for (let i = 0; i < text.length; i++) view.setUint8(offset + i, text.charCodeAt(i));
+    for (let i = 0; i < text.length; i++)
+      view.setUint8(offset + i, text.charCodeAt(i));
   };
 
   ascii(0, "RIFF");

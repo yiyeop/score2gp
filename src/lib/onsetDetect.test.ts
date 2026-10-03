@@ -95,7 +95,9 @@ describe("createOnsetDetector", () => {
     const d = createOnsetDetector(RATE);
     const piecemeal: number[] = [];
     for (let i = 0; i < buf.length; i += 333) {
-      piecemeal.push(...d.push(buf.subarray(i, i + 333)).onsets.map((k) => k.time));
+      piecemeal.push(
+        ...d.push(buf.subarray(i, i + 333)).onsets.map((k) => k.time),
+      );
     }
     expect(piecemeal).toEqual(whole);
   });
@@ -117,7 +119,8 @@ describe("createOnsetDetector", () => {
       const start = Math.round(at * RATE);
       for (let i = 0; i < RATE * 0.2 && start + i < buf.length; i++) {
         const t = i / RATE;
-        buf[start + i] += 0.7 * Math.sin(2 * Math.PI * 205 * t) * Math.exp(-t * 30);
+        buf[start + i] +=
+          0.7 * Math.sin(2 * Math.PI * 205 * t) * Math.exp(-t * 30);
       }
     }
     expectKicksNear(detect(buf), times);
@@ -130,7 +133,8 @@ describe("createOnsetDetector", () => {
     for (let i = 0; i < RATE * 0.2; i++) {
       const t = i / RATE;
       buf[start + i] =
-        (0.9 * Math.sin(2 * Math.PI * 60 * t) + 0.5 * Math.sin(2 * Math.PI * 210 * t)) *
+        (0.9 * Math.sin(2 * Math.PI * 60 * t) +
+          0.5 * Math.sin(2 * Math.PI * 210 * t)) *
         Math.exp(-t * 25);
     }
     expect(detect(buf)).toHaveLength(1);

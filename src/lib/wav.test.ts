@@ -12,7 +12,10 @@ function tone(hz: number, seconds: number, rate: number): Float32Array {
 describe("encodeWav", () => {
   it("writes a header any tool can read", () => {
     const bytes = encodeWav(tone(440, 0.01, 48000), 48000);
-    const text = String.fromCharCode(...bytes.slice(0, 4), ...bytes.slice(8, 12));
+    const text = String.fromCharCode(
+      ...bytes.slice(0, 4),
+      ...bytes.slice(8, 12),
+    );
     expect(text).toBe("RIFFWAVE");
     const view = new DataView(bytes.buffer);
     expect(view.getUint32(24, true)).toBe(48000); // 표본율

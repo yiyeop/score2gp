@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createOnsetDetector, type Onset } from "../lib/onsetDetect";
-import { fitBeat, FIT_WINDOW, type BeatFit, type BeatSample } from "../lib/beatFit";
+import {
+  fitBeat,
+  FIT_WINDOW,
+  type BeatFit,
+  type BeatSample,
+} from "../lib/beatFit";
 
 /**
  * 마이크를 열어 연주를 듣는다.
@@ -218,7 +223,8 @@ export function useOnsetListener(
 
           // 박을 맞출 근거는 '커진 정도'의 흐름이다. 창 밖으로 나간 것은 버린다.
           const samples = samplesRef.current;
-          for (const n of novelty) samples.push({ time: n.time, weight: n.value });
+          for (const n of novelty)
+            samples.push({ time: n.time, weight: n.value });
           const cutoff = now - FIT_WINDOW;
           let drop = 0;
           while (drop < samples.length && samples[drop].time < cutoff) drop++;

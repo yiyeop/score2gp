@@ -64,13 +64,20 @@ export function useBeatFollow(player: PlayerHandle): BeatFollowHandle {
 
   // 녹음이 끝나면 그 자리에서 저장 위치를 묻는다 — 파일이 어디 갔는지
   // 찾아다니게 만들면 진단을 부탁하기 어려워진다.
-  const onCaptured = useCallback((samples: Float32Array, sampleRate: number) => {
-    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
-    void saveBytesAs(encodeWav(samples, sampleRate), `score2gp-녹음-${stamp}.wav`, {
-      label: "WAV 소리 파일",
-      extension: "wav",
-    });
-  }, []);
+  const onCaptured = useCallback(
+    (samples: Float32Array, sampleRate: number) => {
+      const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+      void saveBytesAs(
+        encodeWav(samples, sampleRate),
+        `score2gp-녹음-${stamp}.wav`,
+        {
+          label: "WAV 소리 파일",
+          extension: "wav",
+        },
+      );
+    },
+    [],
+  );
 
   const onsets = useOnsetListener({
     onHit,

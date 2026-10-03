@@ -52,7 +52,9 @@ describe("followSpeed", () => {
 
   it("stays inside the speeds the player accepts", () => {
     expect(followSpeed({ ...base, playedBpm: 400 })).toBeLessThanOrEqual(2);
-    expect(followSpeed({ ...base, playedBpm: 10 })).toBeGreaterThanOrEqual(0.25);
+    expect(followSpeed({ ...base, playedBpm: 10 })).toBeGreaterThanOrEqual(
+      0.25,
+    );
   });
 });
 
