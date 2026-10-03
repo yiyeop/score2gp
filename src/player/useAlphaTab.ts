@@ -8,8 +8,16 @@ import {
   type ChannelEffects,
 } from "../lib/gpEffects";
 import { exportScore, type ExportFormatId } from "../lib/exportScore";
-import { forDisplay, techniquesOfBeat, type Technique } from "../lib/techniques";
-import { barRangeToTicks, normalizeBarRange, type BarRange } from "../lib/loopRange";
+import {
+  forDisplay,
+  techniquesOfBeat,
+  type Technique,
+} from "../lib/techniques";
+import {
+  barRangeToTicks,
+  normalizeBarRange,
+  type BarRange,
+} from "../lib/loopRange";
 
 /** 편집 모드에서 고른 대상. 박은 항상 있고, 쉼표라면 음이 없다. */
 export interface ScoreSelection {
@@ -252,7 +260,10 @@ export function useAlphaTab() {
       if (!lookup || !surface) return clearHover();
 
       const rect = surface.getBoundingClientRect();
-      const beat = lookup.getBeatAtPos(e.clientX - rect.left, e.clientY - rect.top);
+      const beat = lookup.getBeatAtPos(
+        e.clientX - rect.left,
+        e.clientY - rect.top,
+      );
       if (!beat) return clearHover();
       if (beat === hoveredBeat) return; // 같은 음 위에서는 다시 계산하지 않는다
 
@@ -374,7 +385,8 @@ export function useAlphaTab() {
     const viewport = viewportRef.current;
     const container = containerRef.current;
     if (!api || !viewport || !container) return;
-    const bounds = api.boundsLookup?.findMasterBarByIndex(barIndex)?.visualBounds;
+    const bounds =
+      api.boundsLookup?.findMasterBarByIndex(barIndex)?.visualBounds;
     const surface = container.querySelector<HTMLElement>(".at-surface");
     if (!bounds || !surface) return;
 
@@ -383,7 +395,10 @@ export function useAlphaTab() {
     const targetTop = surfaceTop + bounds.y - viewportTop + viewport.scrollTop;
 
     const padding = 16;
-    const maxScroll = Math.max(0, viewport.scrollHeight - viewport.clientHeight);
+    const maxScroll = Math.max(
+      0,
+      viewport.scrollHeight - viewport.clientHeight,
+    );
     viewport.scrollTop = clamp(targetTop - padding, 0, maxScroll);
   }, []);
 

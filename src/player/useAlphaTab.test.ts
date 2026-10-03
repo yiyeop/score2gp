@@ -70,7 +70,10 @@ vi.mock(import("@coderline/alphatab"), async (importOriginal) => {
   const actual = await importOriginal();
   // FakeAlphaTabApi는 실제 AlphaTabApi의 극히 일부만 흉내 내므로 구조적으로는
   // 호환되지 않는다 — 테스트 목적의 의도된 대체이므로 unknown을 거쳐 강제한다.
-  return { ...actual, AlphaTabApi: FakeAlphaTabApi } as unknown as typeof actual;
+  return {
+    ...actual,
+    AlphaTabApi: FakeAlphaTabApi,
+  } as unknown as typeof actual;
 });
 
 const { useAlphaTab } = await import("./useAlphaTab");

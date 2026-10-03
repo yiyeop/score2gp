@@ -47,7 +47,12 @@ describe("loadPracticeSettings", () => {
 
   it("round-trips a saved value for the same file", () => {
     const storage = memoryStorage();
-    const settings = { speed: 0.75, transpose: -2, masterVolume: 0.5, tabOnly: true };
+    const settings = {
+      speed: 0.75,
+      transpose: -2,
+      masterVolume: 0.5,
+      tabOnly: true,
+    };
     savePracticeSettings("song-a.gp", settings, storage);
     expect(loadPracticeSettings("song-a.gp", storage)).toEqual(settings);
   });
@@ -66,7 +71,12 @@ describe("loadPracticeSettings", () => {
 
   it("re-opening the same file after switching away restores its last settings", () => {
     const storage = memoryStorage();
-    const forA = { speed: 1.2, transpose: 3, masterVolume: 0.6, tabOnly: false };
+    const forA = {
+      speed: 1.2,
+      transpose: 3,
+      masterVolume: 0.6,
+      tabOnly: false,
+    };
     const forB = { speed: 0.5, transpose: -1, masterVolume: 1, tabOnly: true };
     savePracticeSettings("song-a.gp", forA, storage);
     savePracticeSettings("song-b.gp", forB, storage);
@@ -77,7 +87,11 @@ describe("loadPracticeSettings", () => {
 
   it("gives the demo song (null file name) its own persisted key, isolated from real files", () => {
     const storage = memoryStorage();
-    savePracticeSettings(null, { speed: 1.3, transpose: 1, masterVolume: 0.8, tabOnly: true }, storage);
+    savePracticeSettings(
+      null,
+      { speed: 1.3, transpose: 1, masterVolume: 0.8, tabOnly: true },
+      storage,
+    );
     savePracticeSettings(
       "song-a.gp",
       { speed: 0.9, transpose: -4, masterVolume: 0.3, tabOnly: false },

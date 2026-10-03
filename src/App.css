@@ -12,7 +12,11 @@
   /* 앱 아이콘의 브랜드 주황. 로고의 '2'에만 쓴다. */
   --brand-orange: #ff5a1f;
   --accent-soft: rgba(79, 140, 255, 0.18);
-  font-family: "Pretendard", "Apple SD Gothic Neo", system-ui, -apple-system,
+  font-family:
+    "Pretendard",
+    "Apple SD Gothic Neo",
+    system-ui,
+    -apple-system,
     sans-serif;
   color-scheme: dark;
 }

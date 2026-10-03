@@ -1,5 +1,12 @@
 import { useState } from "react";
-import { ChevronDown, ChevronUp, ListMusic, Metronome, Repeat, Timer } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  ListMusic,
+  Metronome,
+  Repeat,
+  Timer,
+} from "lucide-react";
 import type { PlayerHandle } from "../../player/useAlphaTab";
 import {
   SPEED_MAX,

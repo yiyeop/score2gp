@@ -22,7 +22,10 @@ interface Change {
 }
 
 /** 초보자에게 보여줄 음길이 선택지. 이보다 잘게는 거의 쓰지 않는다. */
-export const DURATIONS: Array<{ value: alphaTab.model.Duration; label: string }> = [
+export const DURATIONS: Array<{
+  value: alphaTab.model.Duration;
+  label: string;
+}> = [
   { value: alphaTab.model.Duration.Whole, label: "온음표" },
   { value: alphaTab.model.Duration.Half, label: "2분음표" },
   { value: alphaTab.model.Duration.Quarter, label: "4분음표" },
@@ -43,7 +46,11 @@ export function useScoreEditor(player: PlayerHandle, onEdit?: () => void) {
   const [past, setPast] = useState<Change[]>([]);
   const [future, setFuture] = useState<Change[]>([]);
   // 프렛을 두 자리로 칠 수 있게 잠깐 기억한다 ('1' 다음 '2' → 12프렛)
-  const typingRef = useRef<{ beat: unknown; digits: string; at: number } | null>(null);
+  const typingRef = useRef<{
+    beat: unknown;
+    digits: string;
+    at: number;
+  } | null>(null);
 
   // 다른 악보를 열면 이전 악보의 편집 기록은 뜻이 없다
   useEffect(() => {

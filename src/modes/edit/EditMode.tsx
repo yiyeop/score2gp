@@ -76,7 +76,9 @@ export function EditModeSidebar({
     <>
       {mobileNarrowBanner}
       {tabbar}
-      <div className={`sidebar__sheet${mobileOpen ? " sidebar__sheet--open" : ""}`}>
+      <div
+        className={`sidebar__sheet${mobileOpen ? " sidebar__sheet--open" : ""}`}
+      >
         <div className="sidebar__grabber" aria-hidden="true" />
         <div className="sidebar__sheet-body">{body}</div>
       </div>
@@ -123,136 +125,137 @@ export function EditModeSidebar({
     <aside className="sidebar edit-panel">
       {wrapSheet(
         <>
-      <h2 className="panel-title">편집 모드</h2>
-      {hint}
+          <h2 className="panel-title">편집 모드</h2>
+          {hint}
 
-      {note ? (
-        <>
+          {note ? (
+            <>
+              <section className="edit-group">
+                <h3 className="edit-group__title">짚는 자리 (프렛)</h3>
+                <div className="edit-stepper">
+                  <button
+                    type="button"
+                    onClick={() => editor.setFret(note.fret - 1)}
+                    disabled={note.fret <= 0}
+                    title="한 칸 낮추기"
+                  >
+                    −
+                  </button>
+                  <span className="edit-stepper__value">{note.fret}</span>
+                  <button
+                    type="button"
+                    onClick={() => editor.setFret(note.fret + 1)}
+                    disabled={note.fret >= FRET_MAX}
+                    title="한 칸 높이기"
+                  >
+                    +
+                  </button>
+                </div>
+                <p className="edit-hint">숫자 키를 눌러 바로 칠 수도 있어요.</p>
+              </section>
+
+              <section className="edit-group">
+                <h3 className="edit-group__title">줄</h3>
+                <div className="edit-stepper">
+                  <button
+                    type="button"
+                    onClick={() => editor.moveString(-1)}
+                    title="위쪽(가는) 줄로 — 소리는 그대로예요"
+                  >
+                    ↑
+                  </button>
+                  <span className="edit-stepper__value">{note.string}번</span>
+                  <button
+                    type="button"
+                    onClick={() => editor.moveString(1)}
+                    title="아래쪽(굵은) 줄로 — 소리는 그대로예요"
+                  >
+                    ↓
+                  </button>
+                </div>
+                <p className="edit-hint">
+                  같은 소리를 다른 줄에서 짚도록 옮겨요. 프렛도 같이 맞춰집니다.
+                </p>
+              </section>
+            </>
+          ) : (
+            <p className="edit-hint edit-hint--block">
+              이 자리는 쉼표라 짚는 자리가 없어요. 길이는 아래에서 바꿀 수
+              있어요.
+            </p>
+          )}
+
           <section className="edit-group">
-            <h3 className="edit-group__title">짚는 자리 (프렛)</h3>
-            <div className="edit-stepper">
-              <button
-                type="button"
-                onClick={() => editor.setFret(note.fret - 1)}
-                disabled={note.fret <= 0}
-                title="한 칸 낮추기"
-              >
-                −
-              </button>
-              <span className="edit-stepper__value">{note.fret}</span>
-              <button
-                type="button"
-                onClick={() => editor.setFret(note.fret + 1)}
-                disabled={note.fret >= FRET_MAX}
-                title="한 칸 높이기"
-              >
-                +
-              </button>
+            <h3 className="edit-group__title">길이</h3>
+            <div className="edit-durations">
+              {DURATIONS.map((d) => (
+                <button
+                  key={d.value}
+                  type="button"
+                  className={`chip${beat.duration === d.value ? " chip--active" : ""}`}
+                  onClick={() => editor.setDuration(d.value)}
+                >
+                  {d.label}
+                </button>
+              ))}
             </div>
-            <p className="edit-hint">숫자 키를 눌러 바로 칠 수도 있어요.</p>
+            <button
+              type="button"
+              className={`chip edit-dot${beat.dots > 0 ? " chip--active" : ""}`}
+              onClick={editor.toggleDot}
+              title="점을 붙이면 길이가 1.5배가 돼요"
+            >
+              점음표 {beat.dots > 0 ? "켜짐" : "꺼짐"}
+            </button>
           </section>
 
           <section className="edit-group">
-            <h3 className="edit-group__title">줄</h3>
-            <div className="edit-stepper">
-              <button
-                type="button"
-                onClick={() => editor.moveString(-1)}
-                title="위쪽(가는) 줄로 — 소리는 그대로예요"
-              >
-                ↑
-              </button>
-              <span className="edit-stepper__value">{note.string}번</span>
-              <button
-                type="button"
-                onClick={() => editor.moveString(1)}
-                title="아래쪽(굵은) 줄로 — 소리는 그대로예요"
-              >
-                ↓
-              </button>
+            <h3 className="edit-group__title">
+              이 마디의 톤
+              {editor.barTone === null && (
+                <span className="edit-group__note"> — 앞 마디에서 이어짐</span>
+              )}
+            </h3>
+            <div className="edit-durations">
+              {TONE_CHOICES.map((t) => (
+                <button
+                  key={t.program}
+                  type="button"
+                  className={`chip${editor.barTone === t.program ? " chip--active" : ""}`}
+                  onClick={() => editor.setBarTone(t.program)}
+                  title={t.hint}
+                >
+                  {t.label}
+                </button>
+              ))}
             </div>
+            {editor.barTone !== null && (
+              <button
+                type="button"
+                className="chip edit-dot"
+                onClick={() => editor.setBarTone(null)}
+                title="이 마디에서 톤을 바꾸지 않고 앞에서 쓰던 소리를 이어갑니다"
+              >
+                톤 바꾸지 않기
+              </button>
+            )}
             <p className="edit-hint">
-              같은 소리를 다른 줄에서 짚도록 옮겨요. 프렛도 같이 맞춰집니다.
+              여기서부터 소리가 바뀌어요. 다음에 또 바꾸기 전까지 이어집니다.
             </p>
           </section>
-        </>
-      ) : (
-        <p className="edit-hint edit-hint--block">
-          이 자리는 쉼표라 짚는 자리가 없어요. 길이는 아래에서 바꿀 수 있어요.
-        </p>
-      )}
 
-      <section className="edit-group">
-        <h3 className="edit-group__title">길이</h3>
-        <div className="edit-durations">
-          {DURATIONS.map((d) => (
-            <button
-              key={d.value}
-              type="button"
-              className={`chip${beat.duration === d.value ? " chip--active" : ""}`}
-              onClick={() => editor.setDuration(d.value)}
-            >
-              {d.label}
-            </button>
-          ))}
-        </div>
-        <button
-          type="button"
-          className={`chip edit-dot${beat.dots > 0 ? " chip--active" : ""}`}
-          onClick={editor.toggleDot}
-          title="점을 붙이면 길이가 1.5배가 돼요"
-        >
-          점음표 {beat.dots > 0 ? "켜짐" : "꺼짐"}
-        </button>
-      </section>
-
-      <section className="edit-group">
-        <h3 className="edit-group__title">
-          이 마디의 톤
-          {editor.barTone === null && (
-            <span className="edit-group__note"> — 앞 마디에서 이어짐</span>
+          {note && (
+            <section className="edit-group">
+              <button
+                type="button"
+                className="edit-clear"
+                onClick={editor.clearNotes}
+                title="이 자리를 쉼표로 만들어요. 마디 길이는 그대로 유지됩니다."
+              >
+                이 음 지우기 (쉼표로)
+              </button>
+            </section>
           )}
-        </h3>
-        <div className="edit-durations">
-          {TONE_CHOICES.map((t) => (
-            <button
-              key={t.program}
-              type="button"
-              className={`chip${editor.barTone === t.program ? " chip--active" : ""}`}
-              onClick={() => editor.setBarTone(t.program)}
-              title={t.hint}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-        {editor.barTone !== null && (
-          <button
-            type="button"
-            className="chip edit-dot"
-            onClick={() => editor.setBarTone(null)}
-            title="이 마디에서 톤을 바꾸지 않고 앞에서 쓰던 소리를 이어갑니다"
-          >
-            톤 바꾸지 않기
-          </button>
-        )}
-        <p className="edit-hint">
-          여기서부터 소리가 바뀌어요. 다음에 또 바꾸기 전까지 이어집니다.
-        </p>
-      </section>
-
-      {note && (
-        <section className="edit-group">
-          <button
-            type="button"
-            className="edit-clear"
-            onClick={editor.clearNotes}
-            title="이 자리를 쉼표로 만들어요. 마디 길이는 그대로 유지됩니다."
-          >
-            이 음 지우기 (쉼표로)
-          </button>
-        </section>
-      )}
         </>,
       )}
     </aside>
@@ -282,48 +285,50 @@ export function EditModeBar({
   return (
     <footer className="transport">
       <div className="transport__tier1">
-      <div className="transport__group">
-        <button
-          type="button"
-          className="transport__play"
-          onClick={player.playPause}
-          disabled={disabled}
-          title="고친 곳을 소리로 확인해보세요 (Space)"
-        >
-          {player.isPlaying ? "⏸" : "▶"}
-        </button>
-        <button
-          type="button"
-          className="transport__stop"
-          onClick={player.stop}
-          disabled={disabled}
-          title="정지 (Esc)"
-        >
-          ⏹
-        </button>
-      </div>
+        <div className="transport__group">
+          <button
+            type="button"
+            className="transport__play"
+            onClick={player.playPause}
+            disabled={disabled}
+            title="고친 곳을 소리로 확인해보세요 (Space)"
+          >
+            {player.isPlaying ? "⏸" : "▶"}
+          </button>
+          <button
+            type="button"
+            className="transport__stop"
+            onClick={player.stop}
+            disabled={disabled}
+            title="정지 (Esc)"
+          >
+            ⏹
+          </button>
+        </div>
 
-      <div className="transport__group transport__bars">
-        <button
-          type="button"
-          onClick={() => player.stepSelection(-1)}
-          disabled={!editor.beat}
-          title="앞 음으로 (←)"
-        >
-          ◀
-        </button>
-        <span className="transport__bar-label">
-          {editor.beat ? `${editor.beat.voice.bar.index + 1}마디` : "음 고르기"}
-        </span>
-        <button
-          type="button"
-          onClick={() => player.stepSelection(1)}
-          disabled={!editor.beat}
-          title="다음 음으로 (→)"
-        >
-          ▶
-        </button>
-      </div>
+        <div className="transport__group transport__bars">
+          <button
+            type="button"
+            onClick={() => player.stepSelection(-1)}
+            disabled={!editor.beat}
+            title="앞 음으로 (←)"
+          >
+            ◀
+          </button>
+          <span className="transport__bar-label">
+            {editor.beat
+              ? `${editor.beat.voice.bar.index + 1}마디`
+              : "음 고르기"}
+          </span>
+          <button
+            type="button"
+            onClick={() => player.stepSelection(1)}
+            disabled={!editor.beat}
+            title="다음 음으로 (→)"
+          >
+            ▶
+          </button>
+        </div>
 
         <button
           type="button"
@@ -343,30 +348,30 @@ export function EditModeBar({
       <div
         className={`transport__tier2${mobileTier2Open ? " transport__tier2--open" : ""}`}
       >
-      <div className="transport__group">
-        <button
-          type="button"
-          onClick={editor.undo}
-          disabled={!editor.canUndo}
-          title="방금 한 것을 되돌려요 (Cmd/Ctrl+Z)"
-        >
-          ↩︎ 되돌리기
-        </button>
-        <button
-          type="button"
-          onClick={editor.redo}
-          disabled={!editor.canRedo}
-          title="되돌린 것을 다시 해요 (Shift+Cmd/Ctrl+Z)"
-        >
-          ↪︎ 다시하기
-        </button>
-      </div>
+        <div className="transport__group">
+          <button
+            type="button"
+            onClick={editor.undo}
+            disabled={!editor.canUndo}
+            title="방금 한 것을 되돌려요 (Cmd/Ctrl+Z)"
+          >
+            ↩︎ 되돌리기
+          </button>
+          <button
+            type="button"
+            onClick={editor.redo}
+            disabled={!editor.canRedo}
+            title="되돌린 것을 다시 해요 (Shift+Cmd/Ctrl+Z)"
+          >
+            ↪︎ 다시하기
+          </button>
+        </div>
 
-      <span className="edit-status">
-        {editor.lastChange
-          ? `방금: ${editor.lastChange}`
-          : "악보에서 음을 눌러 고르세요"}
-      </span>
+        <span className="edit-status">
+          {editor.lastChange
+            ? `방금: ${editor.lastChange}`
+            : "악보에서 음을 눌러 고르세요"}
+        </span>
       </div>
     </footer>
   );

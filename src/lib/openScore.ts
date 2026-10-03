@@ -43,7 +43,10 @@ export async function openScoreFile(): Promise<OpenedScore | null> {
     input.onchange = async () => {
       const file = input.files?.[0];
       if (!file) return resolve(null);
-      resolve({ name: file.name, data: new Uint8Array(await file.arrayBuffer()) });
+      resolve({
+        name: file.name,
+        data: new Uint8Array(await file.arrayBuffer()),
+      });
     };
     input.oncancel = () => resolve(null);
     input.click();
@@ -66,7 +69,7 @@ export interface ConvertResult {
 export async function convertPdfFile(): Promise<
   (OpenedScore & { log: string; converted: string; fromCache: boolean }) | null
 > {
-    if (!isTauri()) {
+  if (!isTauri()) {
     throw new Error("PDF 변환은 앱에서만 됩니다");
   }
 

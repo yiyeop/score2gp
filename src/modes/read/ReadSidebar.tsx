@@ -100,7 +100,9 @@ export function ReadSidebar({
           </button>
         )}
       </div>
-      <div className={`sidebar__sheet${mobileTab ? " sidebar__sheet--open" : ""}`}>
+      <div
+        className={`sidebar__sheet${mobileTab ? " sidebar__sheet--open" : ""}`}
+      >
         <div className="sidebar__grabber" aria-hidden="true" />
         <div className="sidebar__sheet-body">
           <div

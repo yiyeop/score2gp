@@ -124,7 +124,11 @@ class Reader {
   }
 
   private text(start: number, length: number): string {
-    const bytes = new Uint8Array(this.view.buffer, this.view.byteOffset + start, length);
+    const bytes = new Uint8Array(
+      this.view.buffer,
+      this.view.byteOffset + start,
+      length,
+    );
     return String.fromCharCode(...bytes);
   }
 }
@@ -137,7 +141,8 @@ function parseVersion(text: string): [number, number, number] | null {
 }
 
 /** GP가 파일에 담는 0~16 값을 재생기가 쓰는 0~128로 옮긴다. */
-const toChannelValue = (raw: number) => Math.min(Math.max((raw << 3) - 1, -1), 32767) + 1;
+const toChannelValue = (raw: number) =>
+  Math.min(Math.max((raw << 3) - 1, -1), 32767) + 1;
 
 /**
  * 채널 정보 앞에 놓인 헤더를 건너뛴다.
@@ -198,7 +203,9 @@ function skipToChannels(r: Reader, version: [number, number, number]): void {
  */
 export function readChannelEffects(data: Uint8Array): ChannelEffects[] {
   try {
-    const r = new Reader(new DataView(data.buffer, data.byteOffset, data.byteLength));
+    const r = new Reader(
+      new DataView(data.buffer, data.byteOffset, data.byteLength),
+    );
     const version = parseVersion(r.byteSizeString(30));
     if (!version || version[0] < 3 || version[0] > 5) return [];
 

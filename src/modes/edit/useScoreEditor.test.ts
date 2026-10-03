@@ -26,7 +26,9 @@ function makeFixture() {
     duration: 1,
     dots: 0,
     automations: [] as unknown[],
-    voice: { bar: { staff: { stringTuning: { tunings: [40, 45, 50, 55, 59, 64] } } } },
+    voice: {
+      bar: { staff: { stringTuning: { tunings: [40, 45, 50, 55, 59, 64] } } },
+    },
   };
   note.beat = beat;
   // moveString이 참조하는 마디 첫 박(setBarTone에서도 재사용)

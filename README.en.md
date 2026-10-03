@@ -1,24 +1,24 @@
 # Score2GP
 
-*[한국어](README.md) · English*
+_[한국어](README.md) · English_
 
 **Turn PDF sheet music into sound.** Score2GP reads a PDF exported by notation
 software — picking up the tablature, rhythm and playing techniques — and writes
 it out as a Guitar Pro file. The playback cursor follows the score and you can
 slow it down, so you can practise along.
 
-It reads **vector PDFs**: files produced by *Export as PDF* in Guitar Pro,
+It reads **vector PDFs**: files produced by _Export as PDF_ in Guitar Pro,
 Finale or MuseScore. Scans and photographs are not supported.
 
 ## Install
 
 ### [⬇ Download the latest release](https://github.com/yiyeop/score2gp/releases/latest)
 
-| OS | File to grab |
-|---|---|
-| macOS (Apple Silicon) | `.dmg` |
-| Windows | `-setup.exe` (or `.msi`) |
-| Linux | `.AppImage` (or `.deb`, `.rpm`) |
+| OS                    | File to grab                    |
+| --------------------- | ------------------------------- |
+| macOS (Apple Silicon) | `.dmg`                          |
+| Windows               | `-setup.exe` (or `.msi`)        |
+| Linux                 | `.AppImage` (or `.deb`, `.rpm`) |
 
 Pick by extension — there is exactly one per platform. The architecture suffix
 in the filename (`x64`, `aarch64`, …) is chosen by the build tooling, so it is
@@ -27,7 +27,7 @@ deliberately not documented here; naming it would silently go stale.
 The PDF converter ships inside the app. You do **not** need Python installed.
 
 > **The macOS build is Apple Silicon only (M1 and later).** It will not run on
-> an Intel Mac, not even under Rosetta. Check with  → About This Mac → the
+> an Intel Mac, not even under Rosetta. Check with → About This Mac → the
 > chip should read `Apple M…`.
 
 ### The first launch shows a warning
@@ -174,13 +174,13 @@ state as they are.
 
 ## Roadmap
 
-| Phase | Scope | Status |
-|---|---|---|
-| 0 | GP player (read mode) | ✅ |
-| 1 | **Direct vector-PDF extraction** → note data | ✅ |
-| 1b | OMR for scanned PDFs (Audiveris sidecar) | on hold |
-| 2 | Extraction → `.gp` output, direct GP parsing | ✅ |
-| 3 | Edit mode (fixing misreads) | ✅ |
+| Phase | Scope                                        | Status  |
+| ----- | -------------------------------------------- | ------- |
+| 0     | GP player (read mode)                        | ✅      |
+| 1     | **Direct vector-PDF extraction** → note data | ✅      |
+| 1b    | OMR for scanned PDFs (Audiveris sidecar)     | on hold |
+| 2     | Extraction → `.gp` output, direct GP parsing | ✅      |
+| 3     | Edit mode (fixing misreads)                  | ✅      |
 
 ### Design records
 

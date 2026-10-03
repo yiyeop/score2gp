@@ -4,7 +4,10 @@ import { useAlphaTab } from "./player/useAlphaTab";
 import { usePracticeSettingsPersistence } from "./player/usePracticeSettingsPersistence";
 import { useShortcuts } from "./shortcuts/useShortcuts";
 import { APP_MODES, type AppModeId } from "./modes/registry";
-import { READ_SHORTCUT_DOCS, buildReadShortcuts } from "./modes/read/readShortcuts";
+import {
+  READ_SHORTCUT_DOCS,
+  buildReadShortcuts,
+} from "./modes/read/readShortcuts";
 import { ReadSidebar, type MobileSheetTab } from "./modes/read/ReadSidebar";
 import { TransportBar } from "./modes/read/TransportBar";
 import { Timeline } from "./modes/read/Timeline";
@@ -13,7 +16,10 @@ import { ShortcutHelp } from "./modes/read/ShortcutHelp";
 import { EditModeBar, EditModeSidebar } from "./modes/edit/EditMode";
 import { EditMarker } from "./modes/edit/EditMarker";
 import { useScoreEditor } from "./modes/edit/useScoreEditor";
-import { EDIT_SHORTCUT_DOCS, buildEditShortcuts } from "./modes/edit/editShortcuts";
+import {
+  EDIT_SHORTCUT_DOCS,
+  buildEditShortcuts,
+} from "./modes/edit/editShortcuts";
 import { convertPdfFile, openScoreFile, saveScoreAs } from "./lib/openScore";
 import {
   EXPORT_FORMATS,
@@ -42,7 +48,9 @@ function ExportMenu({
 }) {
   const [open, setOpen] = useState(false);
   // .gp5는 변환기가 쓴 파일을 옮기는 것이라 변환한 악보에서만 낼 수 있다.
-  const formats = EXPORT_FORMATS.filter((f) => !f.convertedOnly || hasConverted);
+  const formats = EXPORT_FORMATS.filter(
+    (f) => !f.convertedOnly || hasConverted,
+  );
 
   return (
     <div className="export">
@@ -114,7 +122,9 @@ function HeaderMenu({
 }) {
   const [open, setOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
-  const formats = EXPORT_FORMATS.filter((f) => !f.convertedOnly || hasConverted);
+  const formats = EXPORT_FORMATS.filter(
+    (f) => !f.convertedOnly || hasConverted,
+  );
 
   if (!hasScore) return null;
 
@@ -229,7 +239,8 @@ function App() {
   const [editHintDismissed, setEditHintDismissed] = useState(false);
   // 좁은 화면에서 편집 모드가 정밀 조작에 불리하다는 안내(모바일 전용).
   // 위 editHintDismissed와 같은 "세션당 한 번" 패턴이라 App에 함께 둔다.
-  const [mobileEditBannerDismissed, setMobileEditBannerDismissed] = useState(false);
+  const [mobileEditBannerDismissed, setMobileEditBannerDismissed] =
+    useState(false);
 
   // 모바일(<640px) 하단 시트/트랜스포트 tier 2 — 동시에 하나만 열린다는
   // 규칙을 지키려면 두 영역을 아우르는 단일 상태가 필요하다.
@@ -331,7 +342,10 @@ function App() {
       // .gp5는 변환기가 이미 써 둔 파일이라 그대로 옮긴다.
       const content = id === "gp5" ? converted : player.exportAs(id);
       if (!content) return;
-      const name = suggestFileName(fileName ?? player.scoreTitle, format.extension);
+      const name = suggestFileName(
+        fileName ?? player.scoreTitle,
+        format.extension,
+      );
       if (await saveScoreAs(content, name, format)) setSaved(true);
     } catch (e) {
       setConvertError(e instanceof Error ? e.message : String(e));
@@ -365,10 +379,24 @@ function App() {
               <path d="M474 132 L474 318" />
               <path d="M540 132 L540 318" />
             </g>
-            <g fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="62">
-              <path stroke="currentColor" d="M410 585 C404 544 378 522 343 522 C299 522 271 550 271 591 C271 633 303 651 347 669 C394 688 418 716 418 761 C418 814 385 846 340 846 C293 846 263 817 260 773" />
-              <path stroke="var(--brand-orange)" d="M467 585 C472 544 500 522 536 522 C578 522 606 550 606 591 C606 627 586 654 557 690 L475 829 L612 829" />
-              <path stroke="currentColor" d="M794 585 C781 545 752 522 713 522 C654 522 626 588 626 684 C626 784 654 846 713 846 C758 846 789 812 789 753 L789 702 L729 702" />
+            <g
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="62"
+            >
+              <path
+                stroke="currentColor"
+                d="M410 585 C404 544 378 522 343 522 C299 522 271 550 271 591 C271 633 303 651 347 669 C394 688 418 716 418 761 C418 814 385 846 340 846 C293 846 263 817 260 773"
+              />
+              <path
+                stroke="var(--brand-orange)"
+                d="M467 585 C472 544 500 522 536 522 C578 522 606 550 606 591 C606 627 586 654 557 690 L475 829 L612 829"
+              />
+              <path
+                stroke="currentColor"
+                d="M794 585 C781 545 752 522 713 522 C654 522 626 588 626 684 C626 784 654 846 713 846 C758 846 789 812 789 753 L789 702 L729 702"
+              />
             </g>
           </svg>
         </span>
@@ -440,10 +468,14 @@ function App() {
             editor={editor}
             showHint={!editHintDismissed}
             onDismissHint={() => setEditHintDismissed(true)}
-            mobileOpen={mobilePanel?.kind === "sheet" && mobilePanel.tab === "edit"}
+            mobileOpen={
+              mobilePanel?.kind === "sheet" && mobilePanel.tab === "edit"
+            }
             onMobileToggle={() => toggleMobileSheetTab("edit")}
             showMobileNarrowBanner={!mobileEditBannerDismissed}
-            onDismissMobileNarrowBanner={() => setMobileEditBannerDismissed(true)}
+            onDismissMobileNarrowBanner={() =>
+              setMobileEditBannerDismissed(true)
+            }
           />
         )}
 
@@ -451,7 +483,8 @@ function App() {
           className="score-viewport"
           ref={player.viewportRef}
           onClick={
-            mobilePanel && !(mobilePanel.kind === "sheet" && mobilePanel.tab === "edit")
+            mobilePanel &&
+            !(mobilePanel.kind === "sheet" && mobilePanel.tab === "edit")
               ? closeMobilePanel
               : undefined
           }

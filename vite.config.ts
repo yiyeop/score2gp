@@ -20,7 +20,9 @@ function dropUnusedSoundFont(): Plugin {
     apply: "build",
     configResolved(config) {
       const out = config.build.outDir;
-      const outDir = /^([A-Za-z]:)?[\\/]/.test(out) ? out : `${config.root}/${out}`;
+      const outDir = /^([A-Za-z]:)?[\\/]/.test(out)
+        ? out
+        : `${config.root}/${out}`;
       target = `${outDir}/soundfont/sonivox.sf2`;
     },
     closeBundle() {

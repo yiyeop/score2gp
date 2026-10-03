@@ -25,7 +25,8 @@ export function normalizeBarRange(
   barCount: number,
 ): BarRange | null {
   if (barCount <= 0) return null;
-  const clamp = (v: number) => Math.max(0, Math.min(barCount - 1, Math.round(v)));
+  const clamp = (v: number) =>
+    Math.max(0, Math.min(barCount - 1, Math.round(v)));
   const start = clamp(Math.min(a, b));
   const end = clamp(Math.max(a, b));
   return { start, end };

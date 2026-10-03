@@ -29,7 +29,12 @@ export interface Technique {
   basic?: boolean;
 }
 
-const T = (id: string, short: string, name: string, hint: string): Technique => ({
+const T = (
+  id: string,
+  short: string,
+  name: string,
+  hint: string,
+): Technique => ({
   id,
   short,
   name,
@@ -37,7 +42,12 @@ const T = (id: string, short: string, name: string, hint: string): Technique => 
 });
 
 /** 기본 주법으로 표시 (툴팁·목록에서 제외됨) */
-const B = (id: string, short: string, name: string, hint: string): Technique => ({
+const B = (
+  id: string,
+  short: string,
+  name: string,
+  hint: string,
+): Technique => ({
   ...T(id, short, name, hint),
   basic: true,
 });
@@ -163,12 +173,7 @@ export const TECHNIQUES = {
     "고스트 노트",
     "아주 여리게 스치듯 치는 음입니다. 리듬만 살짝 채워줍니다.",
   ),
-  staccato: B(
-    "staccato",
-    "stacc.",
-    "스타카토",
-    "음을 짧게 끊어서 냅니다.",
-  ),
+  staccato: B("staccato", "stacc.", "스타카토", "음을 짧게 끊어서 냅니다."),
   trill: T(
     "trill",
     "tr",

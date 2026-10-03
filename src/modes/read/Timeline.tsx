@@ -43,7 +43,9 @@ export function Timeline({ player }: { player: PlayerHandle }) {
   // 일반 탭)이 경로마다 다르고, 데스크톱에서 "Shift 없는 일반 클릭은 항상
   // 이동이고 고르던 선택은 버린다"는 기존 동작을 터치 흐름과 갈라 유지하려면
   // 어느 쪽으로 시작했는지 기억해야 한다.
-  const [pendingSource, setPendingSource] = useState<"shift" | "touch" | null>(null);
+  const [pendingSource, setPendingSource] = useState<"shift" | "touch" | null>(
+    null,
+  );
   // 진행 중인 터치 제스처(길게 누르기 타이머 포함)의 가변 상태. 렌더마다
   // 새로 만들 필요가 없고 타이머 id를 들고 있어야 해서 ref로 둔다.
   const touchGestureRef = useRef<TouchGestureState | null>(null);
@@ -209,7 +211,8 @@ export function Timeline({ player }: { player: PlayerHandle }) {
               onClick={() => player.clearBarLoopRange()}
               title="구간 반복을 해제합니다"
             >
-              🔁 {player.barLoopRange.start + 1}~{player.barLoopRange.end + 1}마디 반복 ✕
+              🔁 {player.barLoopRange.start + 1}~{player.barLoopRange.end + 1}
+              마디 반복 ✕
             </button>
           )}
         </span>
@@ -228,7 +231,10 @@ export function Timeline({ player }: { player: PlayerHandle }) {
           <div
             key={`${b.bar}-${b.label}`}
             className={`timeline__section${b === activeSection ? " timeline__section--active" : ""}`}
-            style={{ left: `${pct(b.bar)}%`, width: `${pct(b.end) - pct(b.bar)}%` }}
+            style={{
+              left: `${pct(b.bar)}%`,
+              width: `${pct(b.end) - pct(b.bar)}%`,
+            }}
             title={`${b.detail} (${b.bar + 1}마디)`}
           >
             <span>{b.label}</span>
@@ -255,7 +261,10 @@ export function Timeline({ player }: { player: PlayerHandle }) {
           />
         )}
         <div className="timeline__played" style={{ width: `${playedPct}%` }} />
-        <div className="timeline__playhead" style={{ left: `${pct(player.currentBar)}%` }} />
+        <div
+          className="timeline__playhead"
+          style={{ left: `${pct(player.currentBar)}%` }}
+        />
       </div>
 
       <div className="timeline__tones">
@@ -269,20 +278,20 @@ export function Timeline({ player }: { player: PlayerHandle }) {
                 ? "translateX(-100%)"
                 : "translateX(-50%)";
           return (
-          <button
-            key={`${t.bar}-${t.trackIndex}-${i}`}
-            type="button"
-            className="timeline__tone"
-            style={{ left: `${left}%`, transform }}
-            title={`${t.detail} (${t.bar + 1}마디)`}
-            onClick={(e) => {
-              e.stopPropagation();
-              player.goToBar(t.bar);
-            }}
-          >
-            <span className="timeline__tone-dot" />
-            <span className="timeline__tone-label">{t.label}</span>
-          </button>
+            <button
+              key={`${t.bar}-${t.trackIndex}-${i}`}
+              type="button"
+              className="timeline__tone"
+              style={{ left: `${left}%`, transform }}
+              title={`${t.detail} (${t.bar + 1}마디)`}
+              onClick={(e) => {
+                e.stopPropagation();
+                player.goToBar(t.bar);
+              }}
+            >
+              <span className="timeline__tone-dot" />
+              <span className="timeline__tone-label">{t.label}</span>
+            </button>
           );
         })}
       </div>

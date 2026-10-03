@@ -33,32 +33,42 @@ describe("barRangeToTicks", () => {
   const totalTicks = 4000;
 
   it("maps a middle range to [start bar's tick, next bar's tick)", () => {
-    expect(barRangeToTicks({ start: 1, end: 2 }, barStarts, totalTicks)).toEqual({
+    expect(
+      barRangeToTicks({ start: 1, end: 2 }, barStarts, totalTicks),
+    ).toEqual({
       startTick: 1000,
       endTick: 3000,
     });
   });
 
   it("uses totalTicks as the end when the range includes the last bar", () => {
-    expect(barRangeToTicks({ start: 2, end: 3 }, barStarts, totalTicks)).toEqual({
+    expect(
+      barRangeToTicks({ start: 2, end: 3 }, barStarts, totalTicks),
+    ).toEqual({
       startTick: 2000,
       endTick: 4000,
     });
   });
 
   it("handles a single-bar range", () => {
-    expect(barRangeToTicks({ start: 0, end: 0 }, barStarts, totalTicks)).toEqual({
+    expect(
+      barRangeToTicks({ start: 0, end: 0 }, barStarts, totalTicks),
+    ).toEqual({
       startTick: 0,
       endTick: 1000,
     });
   });
 
   it("returns null for an out-of-bounds end bar", () => {
-    expect(barRangeToTicks({ start: 0, end: 4 }, barStarts, totalTicks)).toBeNull();
+    expect(
+      barRangeToTicks({ start: 0, end: 4 }, barStarts, totalTicks),
+    ).toBeNull();
   });
 
   it("returns null when start is after end", () => {
-    expect(barRangeToTicks({ start: 2, end: 1 }, barStarts, totalTicks)).toBeNull();
+    expect(
+      barRangeToTicks({ start: 2, end: 1 }, barStarts, totalTicks),
+    ).toBeNull();
   });
 
   it("returns null when there are no bars yet (midi not loaded)", () => {
